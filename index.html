@@ -1,0 +1,2690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAT CFDI Processor</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{margin:0!important;padding:0!important;width:100%;height:100%}
+body{margin:0!important;padding:0!important;width:100%;height:100%;overflow:hidden}
+.lpanel{margin-top:0;padding-left:0;padding-right:0}
+:root{
+  --bg:#eef0f4; --card:#fff; --raised:#f4f6f9;
+  --b1:#dde1e8; --b2:#c8cdd6;
+  --t1:#1a1d23; --t2:#5a6272; --t3:#9aa0ad;
+  --green:#16a34a; --red:#dc2626; --blue:#2563eb; --amber:#d97706;
+  /* ── Tokens HomePage ── */
+  --hp-bg:#fafafa; --hp-t1:#0f172a; --hp-t2:#475569; --hp-t3:#94a3b8;
+  --hp-b:#e2e8f0; --hp-raised:#f8fafc;
+  --hp-green-bg:#f0fdf4; --hp-green-bd:#bbf7d0; --hp-green-text:#15803d;
+}
+body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--t1);font-size:13px}
+input,button,select{font-family:'Inter',sans-serif}
+input:focus:not(:focus-visible),button:focus:not(:focus-visible),select:focus:not(:focus-visible){outline:none}
+input:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:3px}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
+/* ── Responsive grids ── */
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cfg-outer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;margin-bottom:14px}
+/* ── Mobile ── */
+@media(max-width:720px){
+  body{font-size:12px}
+  .layout{flex-direction:column!important;padding:10px!important}
+  .lpanel{width:100%!important;margin-right:0!important;height:auto!important;border-right:none!important;border-bottom:1px solid var(--b1)!important;border-radius:0!important;box-shadow:none!important;position:static!important;opacity:1!important}
+  .lpanel.closed{width:100%!important;height:0!important;padding:0!important;overflow:hidden;opacity:0!important;pointer-events:none}
+  .ppill{writing-mode:horizontal-tb!important;width:100%!important;flex-direction:row!important;min-width:unset!important;border-radius:7px!important;margin-right:0!important;margin-bottom:10px;position:static!important;padding:8px 14px!important;height:auto!important}
+  .rpanel{width:100%!important}
+  .cfg-grid{grid-template-columns:1fr!important}
+  .cfg-outer{grid-template-columns:1fr!important}
+  .xl-scroll{max-height:55vh}
+  .inv-bar{flex-direction:column;align-items:stretch!important}
+  .inv-bar select,.inv-bar .btn{width:100%!important;box-sizing:border-box}
+}
+@media(max-width:480px){
+  .layout{padding:7px!important}
+  .card{border-radius:8px}
+  .drop-zone{min-height:140px!important;padding:16px!important}
+}
+.card{background:var(--card);border:1px solid var(--b1);border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.raised{background:var(--raised);border:1px solid var(--b1);border-radius:6px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid var(--b2);background:var(--card);color:var(--t1)}
+.btn:hover{background:var(--raised)}
+.btn-p{background:#1a1d23;color:#fff;border-color:#1a1d23}.btn-p:hover{background:#2d3240}
+.btn-d{color:var(--red);border-color:rgba(220,38,38,.2)}.btn-d:hover{background:rgba(220,38,38,.05)}
+.btn-act{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+.btn-green{background:#16a34a;color:#fff;border-color:#16a34a}.btn-green:hover{background:#15803d}
+.tog-track{width:32px;height:18px;border-radius:9px;padding:2px;display:flex;align-items:center;transition:background .2s;cursor:pointer;flex-shrink:0}
+.tog-thumb{width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.drop-zone{border:2px dashed var(--b2);border-radius:10px;transition:all .2s;min-height:185px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;background:var(--card)}
+.drop-zone.over{border-color:#2563eb;border-style:solid;background:rgba(37,99,235,.04)}
+.sidebar-left{position:fixed;left:0;top:54px;bottom:0;width:258px;background:var(--card);border-right:1px solid var(--b1);z-index:50;display:flex;flex-direction:column;overflow:hidden}
+.sb-scroll{flex:1;overflow-y:auto;padding:6px 0 12px}
+.sb-bottom{flex-shrink:0;border-top:1px solid var(--b1)}
+.sb-section{border-bottom:1px solid var(--b1)}
+.sb-section:last-child{border-bottom:none}
+.sb-section-header{display:flex;align-items:center;gap:7px;padding:10px 14px;cursor:pointer;user-select:none;color:var(--t2);font-size:11px;font-weight:650;letter-spacing:.055em;text-transform:uppercase;transition:color .15s}
+.sb-section-header:hover{color:var(--t1)}
+.sb-sec-icon{flex-shrink:0;opacity:.65}
+.sb-sec-title{flex:1}
+.sb-badge{font-size:10px;font-weight:600;background:rgba(22,163,74,.22);color:var(--green);border-radius:10px;padding:1px 6px;letter-spacing:0;text-transform:none}
+.sb-chevron{color:var(--t3);transition:transform .22s ease-out;flex-shrink:0}
+.sb-section.sb-collapsed .sb-chevron{transform:rotate(-90deg)}
+.sb-chevron.open{transform:rotate(180deg)}
+.sb-section-body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .25s ease-out}
+.sb-section.sb-collapsed .sb-section-body{grid-template-rows:0fr}
+.sb-section-inner{overflow:hidden;min-height:0;padding:2px 10px 14px}
+.sbd-wrap{flex-shrink:0;border-top:1px solid var(--b1)}
+.sbd-section{border-bottom:1px solid var(--b1)}
+.sbd-section:last-child{border-bottom:none}
+.sbd-header{display:flex;align-items:center;gap:7px;padding:10px 14px;cursor:pointer;user-select:none;color:var(--t2);font-size:11px;font-weight:650;letter-spacing:.055em;text-transform:uppercase;transition:color .15s}
+.sbd-header:hover{color:var(--t1)}
+.sbd-icon{flex-shrink:0;opacity:.65}
+.sbd-title{flex:1}
+.sbd-badge{font-size:10px;font-weight:600;background:rgba(22,163,74,.22);color:var(--green);border-radius:10px;padding:1px 6px;letter-spacing:0;text-transform:none}
+.sbd-chev{color:var(--t3);flex-shrink:0;transition:transform .22s ease-out}
+.sbd-section.sbd-open .sbd-chev{transform:rotate(180deg)}
+.sbd-body{overflow:hidden;max-height:0;transition:max-height .3s ease-out}
+.sbd-section.sbd-open .sbd-body{max-height:500px}
+.sbd-inner{padding:4px 10px 12px}
+.sb-drop-zone{border:1.5px dashed var(--b2);border-radius:10px;padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;transition:border-color .15s,background .15s;text-align:center}
+.sb-drop-zone:hover,.sb-drop-zone.sb-dragover{border-color:var(--green);background:rgba(22,163,74,.11)}
+.sb-drop-zone.sb-dragover{border-style:solid}
+.sb-drop-icon{color:var(--t3);transition:color .15s;margin-bottom:2px}
+.sb-drop-zone:hover .sb-drop-icon,.sb-drop-zone.sb-dragover .sb-drop-icon{color:var(--green)}
+.sb-drop-label{font-size:12px;color:var(--t2);line-height:1.45}
+.sb-drop-label strong{color:var(--t1);font-weight:550;display:block;margin-bottom:2px}
+.sb-drop-formats{font-size:10px;color:var(--t3);letter-spacing:.03em}
+.sb-file-btns{display:flex;gap:5px;margin-top:6px}
+.sb-file-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 4px;background:var(--raised);border:1px solid var(--b1);border-radius:7px;color:var(--t2);font-size:11px;font-family:'Inter',sans-serif;font-weight:500;cursor:pointer;transition:background .12s,border-color .12s,color .12s}
+.sb-file-btn:hover{background:var(--card);border-color:var(--b2);color:var(--t1)}
+.sb-file-tree{margin-top:10px;display:flex;flex-direction:column}
+.sb-tree-row{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:5px;cursor:default;user-select:none;white-space:nowrap;overflow:hidden}
+.sb-tree-row:hover{background:var(--raised)}
+@keyframes sb-glow{0%,100%{background:rgba(22,163,74,.08)}50%{background:rgba(22,163,74,.22)}}
+.sb-tree-processing{animation:sb-glow 1.3s ease-in-out infinite;}
+.sb-tree-folder{margin-top:9px;font-size:15px;font-weight:550;color:var(--t1);cursor:pointer;padding:3px 5px}
+.sb-tree-folder:first-child{margin-top:3px}
+.sb-rename-btn,.sb-delete-btn{background:none;border:none;cursor:pointer;padding:0 3px;display:flex;align-items:center;opacity:0;transition:opacity .15s;flex-shrink:0}
+.sb-rename-btn{color:var(--t3)}
+.sb-delete-btn{color:var(--t3)}
+.sb-tree-folder:hover .sb-rename-btn,.sb-tree-folder:hover .sb-delete-btn,.sb-tree-xml:hover .sb-delete-btn{opacity:1}
+.sb-delete-btn:hover{color:#ef4444}
+.sb-rename-input{flex:1;background:var(--raised);border:1px solid var(--green);border-radius:4px;padding:1px 5px;font-size:15px;font-family:'Inter',sans-serif;color:var(--t1);outline:none;min-width:0}
+.sb-orig-name{font-size:9px;color:var(--t3);padding:0 4px 3px 28px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:italic;opacity:.7}
+.sb-tree-xml,.sb-tree-zip{font-size:11.5px;color:var(--t3)}
+.sb-tree-icon{flex-shrink:0;display:flex;align-items:center}
+.sb-tree-icon-folder{color:#c09020}
+.sb-tree-icon-xml{color:var(--blue)}
+.sb-tree-icon-zip{color:#9b59b6}
+.sb-tree-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.sb-tree-toggle{flex-shrink:0;color:var(--t3);display:flex;align-items:center;margin-left:2px;transition:transform .2s ease-out}
+.sb-folder-group.sb-collapsed .sb-tree-toggle{transform:rotate(-90deg)}
+.sb-folder-group.sb-collapsed .sb-tree-children{display:none}
+.sb-new-contrib{width:100%;display:flex;align-items:center;gap:7px;padding:7.5px 10px;background:rgba(22,163,74,.11);border:1px solid rgba(22,163,74,.28);border-radius:8px;color:var(--green);font-size:12.5px;font-family:'Inter',sans-serif;font-weight:550;cursor:pointer;margin-bottom:9px;transition:background .12s,border-color .12s}
+.sb-new-contrib:hover{background:rgba(22,163,74,.22);border-color:rgba(22,163,74,.45)}
+.sb-contrib-list{display:flex;flex-direction:column;gap:1px}
+.sb-contrib-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer;transition:background .12s}
+.sb-contrib-item:hover{background:var(--raised)}
+.sb-contrib-item.sb-active{background:var(--b1)}
+.sb-contrib-avatar{width:29px;height:29px;border-radius:7px;background:var(--raised);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:var(--green);flex-shrink:0;letter-spacing:-.01em}
+.sb-contrib-item.sb-active .sb-contrib-avatar{background:rgba(22,163,74,.22)}
+.sb-contrib-info{flex:1;min-width:0}
+.sb-contrib-name{font-size:12.5px;font-weight:500;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-contrib-rfc{font-size:10.5px;color:var(--t3);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.sb-despacho-opts{display:flex;flex-direction:column;gap:6px}
+.sb-despacho-btn{width:100%;display:flex;align-items:center;gap:10px;padding:10px 11px;background:var(--raised);border:1px solid var(--b1);border-radius:9px;cursor:pointer;text-align:left;font-family:'Inter',sans-serif;transition:background .12s,border-color .12s}
+.sb-despacho-btn:hover{background:var(--card);border-color:var(--b2)}
+.sb-db-icon{width:33px;height:33px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-despacho-btn.sb-crear .sb-db-icon{background:rgba(22,163,74,.22);color:var(--green)}
+.sb-despacho-btn.sb-unirse .sb-db-icon{background:rgba(37,99,235,.15);color:var(--blue)}
+.sb-db-text{flex:1}
+.sb-db-title{font-size:13px;font-weight:530;color:var(--t1)}
+.sb-db-desc{font-size:10.5px;color:var(--t3);margin-top:1px}
+.sb-db-arrow{color:var(--t3);flex-shrink:0;transition:transform .15s ease-out,color .12s}
+.sb-despacho-btn:hover .sb-db-arrow{transform:translateX(2px);color:var(--t2)}
+.layout{display:flex;gap:0;align-items:flex-start;margin-left:258px;padding:0 18px;height:calc(100vh - 54px)}
+.lpanel{flex-shrink:0;width:272px;transition:width .35s cubic-bezier(.4,0,.2,1),opacity .25s,margin .35s;overflow-x:hidden;overflow-y:auto;display:flex;flex-direction:column;gap:0;opacity:1;margin-right:18px;position:sticky;top:54px;height:calc(100vh - 54px);background:var(--card);border:none;border-right:1px solid var(--b1);border-radius:0;box-shadow:3px 0 14px rgba(0,0,0,.06)}
+.lpanel.closed{width:0;opacity:0;margin-right:0;pointer-events:none}
+.rpanel{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;padding:18px 0 24px;height:calc(100vh - 54px);overflow-y:auto}
+.ppill{writing-mode:vertical-rl;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:26px;min-width:26px;background:var(--card);border:1px solid var(--b1);border-radius:8px;cursor:pointer;padding:12px 0;font-size:10px;font-weight:500;color:var(--t2);letter-spacing:.07em;box-shadow:0 1px 4px rgba(0,0,0,.05);transition:all .15s;flex-shrink:0;margin-right:14px;position:sticky;top:70px;height:fit-content}
+.ppill:hover{background:var(--raised)}
+/* ── Panel lateral unificado ── */
+.ps-topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--b1);background:var(--raised);border-radius:0;flex-shrink:0}
+.ps-section{border-bottom:1px solid var(--b1);flex-shrink:0}
+.ps-section:last-child{border-bottom:none}
+.ps-hdr{width:100%;display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:transparent;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:background .18s;position:relative;text-align:left}
+.ps-hdr:hover{background:rgba(0,0,0,.025)}
+.ps-hdr[aria-expanded="true"]{background:var(--raised)}
+.ps-hdr[aria-expanded="true"]::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:2.5px;background:var(--blue);border-radius:0 3px 3px 0}
+.ps-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.4,0,.2,1),opacity .22s ease;opacity:0;pointer-events:none}
+.ps-body.ps-open{grid-template-rows:1fr;opacity:1;pointer-events:auto}
+.ps-inner{overflow:hidden;min-height:0}
+.ps-chev{font-size:9px;color:var(--t3);transition:transform .3s cubic-bezier(.4,0,.2,1);display:inline-block;flex-shrink:0;margin-left:6px}
+.ps-chev.open{transform:rotate(180deg)}
+/* ── Upload visual area ── */
+.upload-drop{border:2px dashed var(--b2);border-radius:8px;padding:20px 12px;text-align:center;cursor:pointer;transition:all .25s ease;background:rgba(22,163,74,.02)}
+.upload-drop:hover{border-color:var(--green);background:rgba(22,163,74,.07);box-shadow:0 2px 8px rgba(22,163,74,.1)}
+.upload-drop.drag-over{border-color:var(--blue);background:rgba(37,99,235,.06);transform:scale(1.02);box-shadow:0 4px 14px rgba(37,99,235,.12)}
+/* ── Sidebar rows ── */
+.contrib-row{display:flex;align-items:center;gap:9px;padding:10px 14px;cursor:pointer;transition:all .18s ease;border-left:3px solid transparent;margin-left:-12px;margin-right:-12px}
+.contrib-row:hover{background:rgba(22,163,74,.05);border-left-color:var(--green)}
+.folder-row{display:flex;align-items:center;gap:8px;padding:9px 14px 9px 26px;cursor:pointer;transition:all .18s ease;border-left:2px solid transparent;margin-left:-12px;margin-right:-12px;font-size:11px;color:var(--t2)}
+.folder-row:hover{background:rgba(22,163,74,.06);color:var(--green);border-left-color:var(--green)}
+.file-row{display:flex;align-items:center;gap:7px;padding:7px 14px 7px 44px;cursor:default;transition:background .15s ease;border-left:2px solid transparent;margin-left:-12px;margin-right:-12px;font-size:11px;color:var(--t3)}
+.file-row:hover{background:rgba(22,163,74,.05);border-left-color:rgba(22,163,74,.4)}
+.folder-row.sel{background:rgba(22,163,74,.08);border-left-color:var(--green);color:var(--green);transform:scale(1.012);box-shadow:inset 0 0 0 1px rgba(22,163,74,.15)}
+.folder-row.sel:hover{background:rgba(22,163,74,.12)}
+.file-row.sel{background:rgba(22,163,74,.07);border-left-color:var(--green);color:var(--green);transform:scale(1.01)}
+/* ── Despacho action buttons ── */
+.desp-btn{width:100%;padding:10px 12px;border-radius:6px;border:1px solid var(--b1);background:var(--card);cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--t2);display:flex;align-items:center;gap:9px;transition:all .18s ease;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.desp-btn:hover{background:rgba(22,163,74,.06);border-color:rgba(22,163,74,.35);color:var(--green);transform:translateX(2px);box-shadow:0 2px 8px rgba(22,163,74,.1)}
+/* ── Slide-in animation ── */
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+.slide-in{animation:slideInLeft .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.fade-up{animation:fadeUp .2s ease forwards}
+@keyframes spin{to{transform:rotate(360deg)}}.sp{animation:spin .7s linear infinite;display:inline-block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}.pulse{animation:pulse 2s infinite}
+/* ── Excel table ── */
+.xl-wrap{background:#fff;border:1px solid #c8c8c8;border-radius:4px;overflow:hidden}
+.xl-scroll{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 330px);min-height:180px}
+.xl-table{border-collapse:collapse;font-size:11px;font-family:'Calibri','Segoe UI',sans-serif;background:#fff;color:#000}
+.xl-table th,.xl-table td{border:1px solid #d0d0d0;padding:2px 7px;white-space:nowrap}
+.xl-th{background:#e2efda;color:#1f3d0c;font-weight:600;text-align:left;position:sticky;top:0;z-index:2}
+.xl-th.n{text-align:right}
+.xl-rn{background:#f2f2f2;color:#777;text-align:center;font-size:10px;min-width:28px;user-select:none}
+.xl-even td:not(.xl-rn){background:#fff}
+.xl-odd  td:not(.xl-rn){background:#f7f7f7}
+.xl-mhdr td{background:#bdd7ee;color:#1f3864;font-weight:700;font-size:10px;letter-spacing:.05em;padding:4px 7px;border-top:1.5px solid #2f75b6}
+.xl-mtot td{background:#fff2cc;font-weight:700;border-top:2.5px solid #000!important}
+.xl-gtot td{background:#fce4d6;font-weight:700;border-top:3px solid #000!important}
+.xl-blank td{background:#fff;border-color:#efefef}
+.xl-num{text-align:right;font-variant-numeric:tabular-nums}
+.xl-zero{text-align:right;color:#c0c0c0}
+.xi{color:#16a34a;font-weight:600}.xe{color:#dc2626;font-weight:600}.xt{color:#2563eb;font-weight:600}
+.sh-tab{padding:4px 14px;font-size:11px;cursor:pointer;border:1px solid #ccc;background:#e5e5e5;color:#555;transition:all .15s;font-weight:500}
+.sh-tab.active{background:#fff;border-bottom-color:#fff;color:#000;font-weight:600;position:relative;top:1px}
+.tipo-btn{flex:1;padding:5px 4px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--b2);border-radius:5px;background:var(--card);color:var(--t2);transition:all .15s;text-align:center}
+.tipo-btn.active-i{background:#f0fdf4;border-color:#86efac;color:#15803d;font-weight:600}
+.tipo-btn.active-e{background:#fef2f2;border-color:#fca5a5;color:#dc2626;font-weight:600}
+.tipo-btn.active-a{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8;font-weight:600}
+.inv-sel{padding:5px 9px;border-radius:5px;border:1px solid var(--b2);background:var(--card);color:var(--t1);font-size:11px;cursor:pointer;min-width:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* ── Processing screen ── */
+@keyframes procFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+/* ── HomePage animations ── */
+@keyframes hp-float{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-12px) rotate(-1.5deg)}}
+@keyframes hp-hl{0%,100%{background:#e2efda}50%{background:#bbf7d0}}
+@keyframes hp-scan{0%{top:0}100%{top:100%}}
+@keyframes hp-fadein{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+@keyframes hp-slider{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.hp-float{animation:hp-float 5s ease-in-out infinite}
+.hp-hl{animation:hp-hl 2s ease-in-out infinite}
+.hp-fadein{animation:hp-fadein .7s ease forwards}
+.hp-su{opacity:0;transform:translateY(28px);transition:opacity .55s ease,transform .55s ease}
+.hp-su.vis{opacity:1;transform:none}
+/* ── HomePage layout grid ── */
+.hp-hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.hp-steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+.hp-login-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.hp-feats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+/* ── Touch targets ── */
+.btn-sm{padding:4px 9px;font-size:11px;min-height:28px}
+@media(max-width:768px){
+  .hp-hero-grid{grid-template-columns:1fr!important;gap:36px}
+  .hp-steps-grid{grid-template-columns:1fr!important;gap:16px}
+  .hp-login-grid{grid-template-columns:1fr!important;gap:36px}
+  .hp-feats-grid{grid-template-columns:1fr 1fr!important}
+  .hp-hero-grid .hp-float{display:none}
+}
+@media(max-width:480px){
+  .hp-feats-grid{grid-template-columns:1fr!important}
+  .btn,.btn-sm{min-height:36px}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useEffect,useMemo,useCallback}=React;
+
+/* ══ SUPABASE CONFIG ══
+   1. Crea un proyecto en https://supabase.com
+   2. Ve a Project Settings → API y pega aquí tu URL y anon key
+   3. En Authentication → Providers activa Google y agrega tu OAuth app
+   4. En Authentication → URL Configuration pon la URL donde sirves este archivo
+*/
+const SUPABASE_URL  = 'https://irqrahmpfxykrluwozqr.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_s681iMDlwp5maQsSsbuH3g_iEwnIgTH';
+const sb = (typeof supabase!=='undefined' && SUPABASE_URL!=='TU_SUPABASE_URL')
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    })
+  : null;
+
+/* ══ COLUMNAS ══ */
+const COL_DEFS=[
+  {key:'uuid',          label:'UUID',            group:'comp',    numeric:false,removable:false,facturalevel:false},
+  {key:'archivo',       label:'Archivo',          group:'comp',    numeric:false,removable:true, facturalevel:false},
+  {key:'tipo_cfdi',     label:'Tipo',             group:'comp',    numeric:false,removable:false,facturalevel:false},
+  {key:'serie',         label:'Serie',            group:'comp',    numeric:false,removable:true, facturalevel:false},
+  {key:'folio',         label:'Folio',            group:'comp',    numeric:false,removable:false,facturalevel:false},
+  {key:'fecha',         label:'Fecha Emisión',     group:'comp',    numeric:false,removable:false,facturalevel:false},
+  {key:'fecha_tim',     label:'Fecha Timbrado',   group:'comp',    numeric:false,removable:true, facturalevel:false},
+  {key:'forma_pago',    label:'Forma Pago',        group:'comp',    numeric:false,removable:true, facturalevel:false},
+  {key:'metodo_pago',   label:'Método Pago',       group:'comp',    numeric:false,removable:true, facturalevel:false},
+  {key:'lugar_exp',     label:'Lugar Expedición',  group:'comp',    numeric:false,removable:true, facturalevel:false},
+  {key:'moneda',        label:'Moneda',            group:'comp',    numeric:false,removable:true, facturalevel:false},
+  {key:'tipo_cambio',   label:'Tipo Cambio',       group:'comp',    numeric:true, removable:true, facturalevel:false,currency:false,noSum:true},
+  {key:'rfc_em',        label:'RFC Emisor',        group:'emisor',  numeric:false,removable:false,facturalevel:false},
+  {key:'nom_em',        label:'Nombre Emisor',     group:'emisor',  numeric:false,removable:false,facturalevel:false},
+  {key:'reg_em',        label:'Régimen Emisor',    group:'emisor',  numeric:false,removable:true, facturalevel:false},
+  {key:'rfc_re',        label:'RFC Receptor',      group:'receptor',numeric:false,removable:false,facturalevel:false},
+  {key:'nom_re',        label:'Nombre Receptor',   group:'receptor',numeric:false,removable:false,facturalevel:false},
+  {key:'uso_cfdi',      label:'Uso CFDI',          group:'receptor',numeric:false,removable:true, facturalevel:false},
+  {key:'reg_re',        label:'Rég. Receptor',     group:'receptor',numeric:false,removable:true, facturalevel:false},
+  {key:'dom_re',        label:'C.P. Receptor',     group:'receptor',numeric:false,removable:true, facturalevel:false},
+  {key:'subtotal',      label:'Subtotal',          group:'factura', numeric:true, removable:false,facturalevel:true, currency:true},
+  {key:'desc_fac',      label:'Descuento',         group:'factura', numeric:true, removable:true, facturalevel:true, currency:true,noSum:true},
+  {key:'iva_fac',       label:'IVA Total',         group:'factura', numeric:true, removable:true, facturalevel:true, currency:true},
+  {key:'ieps_fac',      label:'IEPS Total',        group:'factura', numeric:true, removable:true, facturalevel:true, currency:true,noSum:true},
+  {key:'ret_iva_fac',   label:'Ret. IVA',          group:'factura', numeric:true, removable:true, facturalevel:true, currency:true,noSum:true},
+  {key:'ret_isr_fac',   label:'Ret. ISR',          group:'factura', numeric:true, removable:true, facturalevel:true, currency:true,noSum:true},
+  {key:'total',         label:'Total',             group:'factura', numeric:true, removable:false,facturalevel:true, currency:true},
+  {key:'clave_prod',    label:'Clave Prod/Serv',   group:'concepto',numeric:false,removable:true, facturalevel:false},
+  {key:'no_id',         label:'No. Identificación',group:'concepto',numeric:false,removable:true, facturalevel:false},
+  {key:'descripcion',   label:'Descripción',       group:'concepto',numeric:false,removable:false,facturalevel:false},
+  {key:'cantidad',      label:'Cantidad',          group:'concepto',numeric:true, removable:false,facturalevel:false,currency:false,noSum:true},
+  {key:'clave_unidad',  label:'Clave Unidad',      group:'concepto',numeric:false,removable:true, facturalevel:false},
+  {key:'unidad',        label:'Unidad',            group:'concepto',numeric:false,removable:true, facturalevel:false},
+  {key:'valor_unit',    label:'Valor Unitario',    group:'concepto',numeric:true, removable:false,facturalevel:false,currency:true,noSum:true},
+  {key:'importe',       label:'Importe',           group:'concepto',numeric:true, removable:false,facturalevel:false,currency:true,noSum:true},
+  {key:'desc_conc',     label:'Descuento Conc.',   group:'concepto',numeric:true, removable:true, facturalevel:false,currency:true,noSum:true},
+  {key:'tasa_iva_c',    label:'Tasa IVA',          group:'imp_c',   numeric:false,removable:true, facturalevel:false},
+  {key:'tasa_ieps_c',   label:'Tasa IEPS',         group:'imp_c',   numeric:false,removable:true, facturalevel:false},
+  {key:'imp_ieps_c',    label:'IEPS Importe',      group:'imp_c',   numeric:true, removable:true, facturalevel:false,currency:true,noSum:true},
+  {key:'ret_iva_c',     label:'Ret. IVA Conc.',    group:'imp_c',   numeric:true, removable:true, facturalevel:false,currency:true,noSum:true},
+  {key:'ret_isr_c',     label:'Ret. ISR Conc.',    group:'imp_c',   numeric:true, removable:true, facturalevel:false,currency:true,noSum:true},
+];
+
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const CFG_KEY='sat-cfdi-v7';
+const CONTRIB_KEY='sat-contribs-v1';
+const DEFAULT_XF={
+  eliminarCeros:true,sumasMensuales:false,
+  ordenFecha:null,separar:false,sepModo:null,
+  sepPorAno:false,
+  restauradas:[],colsOcultadas:[],
+  colsOcultadasI:[],colsOcultadasE:[],
+  colOrder:[],colOrderI:[],colOrderE:[],
+  tipoFiltro:'todos',
+  miRfc:'',
+};
+const DEFAULT_INV={tipo:'todos',mes:'todos',contribuyente:'todos',orden:'default'};
+
+/* ══ UTILS ══ */
+const uid=()=>Math.random().toString(36).slice(2,9);
+const peso=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(+n||0);
+const numFmt=n=>new Intl.NumberFormat('es-MX',{maximumFractionDigits:6}).format(+n||0);
+const monthKey=f=>f?f.slice(0,7):'0000-00';
+const monthLabel=k=>{if(!k||k==='0000-00')return'Sin fecha';const[y,m]=k.split('-');return`${MESES[+m-1]||m} ${y}`;};
+const tipoLabel=t=>({I:'Ingreso',E:'Egreso',T:'Traslado',P:'Pago'}[t]||t||'—');
+
+/* ══ PARSER ══ */
+const parseCFDI=xmlText=>{
+  const fail=msg=>({ok:false,err:[msg],adv:[],comp:{},fiscal:{},concs:[]});
+  let doc;try{doc=new DOMParser().parseFromString(xmlText,'application/xml');}catch{return fail('No se pudo parsear.');}
+  if(doc.querySelector('parsererror'))return fail('XML malformado.');
+  const root=doc.documentElement;
+  if(!(root.localName||'').includes('Comprobante')&&!(root.tagName||'').includes('Comprobante'))
+    return fail(`No es CFDI: ${root.localName||root.tagName}`);
+  const NS=['http://www.sat.gob.mx/cfd/4','http://www.sat.gob.mx/cfd/3'];
+  const q1=(p,n)=>{for(const ns of NS){const r=p.getElementsByTagNameNS(ns,n)[0];if(r)return r;}return p.getElementsByTagName('cfdi:'+n)[0]||p.getElementsByTagName(n)[0]||null;};
+  const qA=(p,n)=>{for(const ns of NS){const r=p.getElementsByTagNameNS(ns,n);if(r.length)return[...r];}const a=p.getElementsByTagName('cfdi:'+n);return a.length?[...a]:[...p.getElementsByTagName(n)];};
+  const at=(el,k)=>(el&&(el.getAttribute(k)||el.getAttribute(k.toLowerCase())))||'';
+  const nm=(el,k)=>parseFloat(at(el,k))||0;
+  const tfdEl=[...root.getElementsByTagName('*')].find(e=>e.localName==='TimbreFiscalDigital');
+  const uuid=tfdEl?at(tfdEl,'UUID'):'';
+  const fechaTim=tfdEl?at(tfdEl,'FechaTimbrado'):'';
+  const em=q1(root,'Emisor'),re=q1(root,'Receptor');
+  const sub=nm(root,'SubTotal'),des=nm(root,'Descuento'),total=nm(root,'Total');
+  const impEl=q1(root,'Impuestos');
+  let ivaFac=0,iepsFac=0,retIvaF=0,retIsrF=0;
+  if(impEl){
+    const trls=qA(impEl,'Traslado');
+    if(trls.length){trls.forEach(t=>{const x=at(t,'Impuesto'),v=nm(t,'Importe');if(x==='002')ivaFac+=v;else if(x==='003')iepsFac+=v;});}
+    else ivaFac=nm(impEl,'TotalImpuestosTrasladados');
+    const rets=qA(impEl,'Retencion');
+    if(rets.length){rets.forEach(r=>{const x=at(r,'Impuesto'),v=nm(r,'Importe');if(x==='001')retIsrF+=v;else if(x==='002')retIvaF+=v;});}
+    else retIvaF=nm(impEl,'TotalImpuestosRetenidos');
+  }
+  const concs=[];
+  const ccEl=q1(root,'Conceptos');
+  if(ccEl){
+    qA(ccEl,'Concepto').forEach(c=>{
+      const cImp=q1(c,'Impuestos');
+      let tasaIva='',impIva=0,tasaIeps='',impIeps=0,retIvaC=0,retIsrC=0;
+      if(cImp){
+        qA(cImp,'Traslado').forEach(t=>{
+          const x=at(t,'Impuesto');
+          if(x==='002'){const tasa=nm(t,'TasaOCuota');tasaIva=at(t,'TipoFactor')==='Exento'?'Exento':(tasa?`${(tasa*100).toFixed(0)}%`:'');impIva=nm(t,'Importe');}
+          else if(x==='003'){tasaIeps=`${(nm(t,'TasaOCuota')*100).toFixed(2)}%`;impIeps=nm(t,'Importe');}
+        });
+        qA(cImp,'Retencion').forEach(r=>{const x=at(r,'Impuesto'),v=nm(r,'Importe');if(x==='001')retIsrC+=v;else if(x==='002')retIvaC+=v;});
+      }
+      concs.push({
+        clave_prod:at(c,'ClaveProdServ'),no_id:at(c,'NoIdentificacion'),
+        desc:at(c,'Descripcion'),cant:nm(c,'Cantidad'),
+        clave_unidad:at(c,'ClaveUnidad'),unidad:at(c,'Unidad'),
+        pu:nm(c,'ValorUnitario'),importe:nm(c,'Importe'),desc_conc:nm(c,'Descuento'),
+        tasaIva,impIva,tasaIeps,impIeps,retIvaC,retIsrC,
+      });
+    });
+  }
+  const adv=[];
+  const calc=+(sub-des+ivaFac+iepsFac-retIvaF-retIsrF).toFixed(2);
+  if(Math.abs(calc-total)>0.10)adv.push(`Diferencia calculada: ${peso(calc)} vs ${peso(total)}`);
+  return{ok:true,err:[],adv,
+    comp:{uuid,tipo:at(root,'TipoDeComprobante'),serie:at(root,'Serie'),folio:at(root,'Folio'),
+      fecha:at(root,'Fecha'),fechaTim,formaPago:at(root,'FormaPago'),metodoPago:at(root,'MetodoPago'),
+      lugarExp:at(root,'LugarExpedicion'),moneda:at(root,'Moneda')||'MXN',tipoCambio:nm(root,'TipoCambio'),
+      rfcEm:at(em,'Rfc'),nomEm:at(em,'Nombre'),regEm:at(em,'RegimenFiscal'),
+      rfcRe:at(re,'Rfc'),nomRe:at(re,'Nombre'),usoCFDI:at(re,'UsoCFDI'),
+      regRe:at(re,'RegimenFiscalReceptor'),domRe:at(re,'DomicilioFiscalReceptor')},
+    fiscal:{sub,des,ivaFac,iepsFac,retIvaF,retIsrF,total},
+    concs};
+};
+
+/* ══ CARPETAS ══ */
+const readDir=r=>new Promise(res=>{const all=[];const go=()=>r.readEntries(es=>{if(!es.length){res(all);return;}all.push(...es);go();},()=>res(all));go();});
+const readEntry=async e=>{if(e.isFile)return new Promise(r=>e.file(f=>r([f]),()=>r([])));if(e.isDirectory){try{const es=await readDir(e.createReader());return(await Promise.all(es.map(readEntry))).flat();}catch{return[];}}return[];};
+
+/* ══ EXTRACCIÓN ZIP ══ */
+const isZip=f=>f.name.toLowerCase().endsWith('.zip')||f.type==='application/zip'||f.type==='application/x-zip-compressed';
+const extractZip=async zipFile=>{
+  try{
+    const JSZip=window.JSZip;
+    if(!JSZip)return{xmls:[],skip:[]};
+    const zip=await JSZip.loadAsync(zipFile);
+    const xmls=[],skip=[];
+    const tasks=[];
+    zip.forEach((path,entry)=>{
+      if(entry.dir)return;
+      const name=path.split('/').pop()||path;
+      if(name.toLowerCase().endsWith('.xml')){
+        tasks.push(entry.async('blob').then(blob=>{
+          const f=new File([blob],name,{type:'text/xml'});
+          xmls.push(f);
+        }));
+      }else if(!name.startsWith('.')){
+        skip.push({name,source:zipFile.name});
+      }
+    });
+    await Promise.all(tasks);
+    return{xmls,skip};
+  }catch{return{xmls:[],skip:[]};}
+};
+
+/* ══ FILAS ══ */
+const toRows=(results,miRfc)=>{
+  const rows=[];
+  results.filter(r=>r.data?.ok).forEach(r=>{
+    const {comp:c,fiscal:f,concs}=r.data;
+    let tipo=c.tipo;
+    if(r.tipoForzado){tipo=r.tipoForzado;}
+    else if(miRfc){
+      if(c.rfcEm===miRfc)tipo='I';
+      else if(c.rfcRe===miRfc)tipo='E';
+    }
+    const base={
+      uuid:c.uuid,archivo:r.name,tipo_cfdi:c.tipo,serie:c.serie,folio:c.folio,
+      fecha:c.fecha,fecha_tim:c.fechaTim,forma_pago:c.formaPago,metodo_pago:c.metodoPago,
+      lugar_exp:c.lugarExp,moneda:c.moneda,tipo_cambio:c.tipoCambio,
+      rfc_em:c.rfcEm,nom_em:c.nomEm,reg_em:c.regEm,
+      rfc_re:c.rfcRe,nom_re:c.nomRe,uso_cfdi:c.usoCFDI,reg_re:c.regRe,dom_re:c.domRe,
+      subtotal:f.sub,desc_fac:f.des,iva_fac:f.ivaFac,ieps_fac:f.iepsFac,
+      ret_iva_fac:f.retIvaF,ret_isr_fac:f.retIsrF,total:f.total,
+      _tipo:tipo,_uuid:c.uuid,
+    };
+    (concs.length?concs:[{}]).forEach(conc=>rows.push({
+      ...base,
+      clave_prod:conc.clave_prod||'',no_id:conc.no_id||'',
+      descripcion:conc.desc||'',cantidad:conc.cant||0,
+      clave_unidad:conc.clave_unidad||'',unidad:conc.unidad||'',
+      valor_unit:conc.pu||0,importe:conc.importe||0,desc_conc:conc.desc_conc||0,
+      tasa_iva_c:conc.tasaIva||'',
+      tasa_ieps_c:conc.tasaIeps||'',imp_ieps_c:conc.impIeps||0,
+      ret_iva_c:conc.retIvaC||0,ret_isr_c:conc.retIsrC||0,
+    }));
+  });
+  return rows;
+};
+
+/* ══ SUMA CON DEDUPLICACIÓN ══ */
+const sumN=(rows,cols)=>cols.reduce((a,c)=>{
+  if(!c.numeric||c.noSum)return a;
+  if(c.facturalevel){
+    const seen=new Set();
+    a[c.key]=rows.reduce((s,r)=>{if(seen.has(r._uuid))return s;seen.add(r._uuid);return s+(r[c.key]||0);},0);
+  }else{
+    a[c.key]=rows.reduce((s,r)=>s+(r[c.key]||0),0);
+  }
+  return a;
+},{});
+
+/* ══ COMPONENTES ══ */
+const Toggle=({on,onChange,label})=>{
+  const gid=useRef(null);
+  if(!gid.current)gid.current='tg'+Math.random().toString(36).slice(2,7);
+  const g=gid.current;
+  return(
+    <div style={{display:'flex',alignItems:'center',gap:10,userSelect:'none'}}>
+      <label style={{position:'relative',display:'inline-block',width:48,height:26,flexShrink:0,cursor:'pointer'}}>
+        <input type="checkbox" role="switch" aria-label={label} checked={on} onChange={onChange}
+          style={{opacity:0,width:0,height:0,position:'absolute'}}/>
+        <span style={{
+          position:'absolute',cursor:'pointer',
+          top:0,left:0,right:0,bottom:0,
+          backgroundColor:on?'#107c41':'#d1d5db',
+          borderRadius:26,
+          transition:'background-color 0.4s cubic-bezier(0.4,0,0.2,1)',
+          boxShadow:'inset 0 2px 4px rgba(0,0,0,.1)',
+        }}>
+          <span style={{
+            position:'absolute',
+            height:20,width:20,left:3,top:3,
+            backgroundColor:'#fff',
+            borderRadius:'50%',
+            transition:'transform 0.4s cubic-bezier(0.4,0,0.2,1)',
+            transform:on?'translateX(22px)':'translateX(0)',
+            boxShadow:'0 2px 6px rgba(0,0,0,.2)',
+            display:'flex',justifyContent:'center',alignItems:'center',
+            overflow:'hidden',
+          }}>
+            <div style={{position:'relative',width:13,height:13}}>
+              {/* OFF: icono hoja en blanco */}
+              <svg style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',
+                transition:'transform 0.4s ease-in-out,opacity 0.3s ease-in-out',
+                opacity:on?0:1,transform:on?'scale(0.5) rotate(45deg)':'scale(1) rotate(0deg)',
+              }} viewBox="0 0 24 24" fill="none">
+                <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="2" strokeLinejoin="round"/>
+                <path d="M14 2V8H20" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {/* ON: icono Excel con degradados */}
+              <svg style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',
+                transition:'transform 0.4s ease-in-out,opacity 0.3s ease-in-out',
+                opacity:on?1:0,transform:on?'scale(1) rotate(0deg)':'scale(0.5) rotate(-45deg)',
+              }} viewBox="0 0 40 40">
+                <defs>
+                  <linearGradient id={g+'-a'} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2ac382"/>
+                    <stop offset="100%" stopColor="#21a366"/>
+                  </linearGradient>
+                  <linearGradient id={g+'-b'} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#21a366"/>
+                    <stop offset="100%" stopColor="#198c56"/>
+                  </linearGradient>
+                  <linearGradient id={g+'-c'} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#198c56"/>
+                    <stop offset="100%" stopColor="#147b4b"/>
+                  </linearGradient>
+                </defs>
+                <rect x="10" y="2" width="28" height="36" rx="3" fill="#107C41"/>
+                <rect x="11" y="3"  width="13" height="11" rx="2" fill={`url(#${g}-a)`}/>
+                <rect x="11" y="15" width="13" height="10" rx="2" fill={`url(#${g}-b)`}/>
+                <rect x="11" y="26" width="13" height="11" rx="2" fill={`url(#${g}-c)`}/>
+                <rect x="25" y="3"  width="12" height="11" rx="2" fill={`url(#${g}-a)`}/>
+                <rect x="25" y="15" width="12" height="10" rx="2" fill={`url(#${g}-b)`}/>
+                <rect x="25" y="26" width="12" height="11" rx="2" fill={`url(#${g}-c)`}/>
+                <path d="M11 14.5H37M11 25.5H37M24.5 3V37" stroke="#fff" strokeWidth="0.5" opacity="0.18"/>
+                <rect x="2" y="8" width="22" height="24" rx="2" fill="#0F6231"/>
+                <path d="M6 12L18 28M18 12L6 28" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+            </div>
+          </span>
+        </span>
+      </label>
+      <span style={{fontSize:12,cursor:'pointer'}} onClick={onChange} aria-hidden="true">{label}</span>
+    </div>
+  );
+};
+const Chip=({label,onX,onLeft,onRight,bg='var(--raised)',fg='var(--t2)',bd='var(--b1)'})=>(
+  <span style={{display:'inline-flex',alignItems:'center',gap:2,padding:'2px 6px 2px 8px',borderRadius:20,background:bg,border:`1px solid ${bd}`,fontSize:11,color:fg}}>
+    {onLeft&&<button onClick={onLeft} title="Mover izquierda" style={{background:'none',border:'none',cursor:'pointer',color:'inherit',padding:'0 2px',fontSize:13,lineHeight:1,opacity:.55}}>‹</button>}
+    <span style={{padding:'0 2px'}}>{label}</span>
+    {onRight&&<button onClick={onRight} title="Mover derecha" style={{background:'none',border:'none',cursor:'pointer',color:'inherit',padding:'0 2px',fontSize:13,lineHeight:1,opacity:.55}}>›</button>}
+    {onX&&<button onClick={onX} aria-label={`Quitar ${label}`} style={{background:'none',border:'none',cursor:'pointer',color:'inherit',padding:'0 1px',fontSize:13,lineHeight:1,opacity:.7}}>×</button>}
+  </span>
+);
+
+/* ══ HOME PAGE ══ */
+const XlMockup=()=>{
+  const [hl,setHl]=useState(1);
+  useEffect(()=>{const t=setInterval(()=>setHl(h=>(h%3)+1),1800);return()=>clearInterval(t);},[]);
+  const hdrs=['UUID','Tipo','Fecha','Emisor','Total'];
+  const rows2=[
+    ['3F8A2B…','Ingreso','2025-01-15','EMPRESA SA DE CV','$45,600.00'],
+    ['9C1D4E…','Egreso','2025-01-22','PROVEEDOR SRL','$12,300.00'],
+    ['7A5F9C…','Ingreso','2025-02-03','CLIENTE SA','$89,450.00'],
+    ['2B8E1F…','Egreso','2025-02-18','SERVICIOS MX','$7,890.00'],
+    ['4D3A7B…','Ingreso','2025-03-05','DISTRIBUIDORA','$34,200.00'],
+  ];
+  const tyC={'Ingreso':'#15803d','Egreso':'#dc2626'};
+  return(
+    <div className="hp-float" style={{background:'#fff',borderRadius:14,boxShadow:'0 24px 64px rgba(0,0,0,.13)',overflow:'hidden',border:'1px solid #e5e7eb',width:'100%',maxWidth:520,fontSize:11,fontFamily:"'Calibri','Segoe UI',sans-serif"}}>
+      <div style={{background:'#1d6f42',padding:'6px 12px',display:'flex',alignItems:'center',gap:8}}>
+        <div style={{display:'flex',gap:5}}>
+          {['#ff5f57','#febc2e','#28c840'].map((c,i)=><div key={i} style={{width:10,height:10,borderRadius:'50%',background:c}}/>)}
+        </div>
+        <span style={{color:'#fff',fontSize:10,fontWeight:600,marginLeft:4,opacity:.85}}>reporte-sat-2025.xlsx</span>
+      </div>
+      <div style={{background:'#e2efda',display:'flex',borderBottom:'1px solid #c6deba'}}>
+        {hdrs.map((h,i)=><div key={i} style={{flex:i===3?2:i===4?1.2:1,padding:'5px 8px',fontWeight:700,fontSize:10,color:'#1f3d0c',borderRight:'1px solid #c6deba',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h}</div>)}
+      </div>
+      {rows2.map((row,ri)=>(
+        <div key={ri} style={{display:'flex',background:ri===hl-1?'#f0fdf4':ri%2===0?'#fff':'#f9fafb',borderBottom:'1px solid #f0f0f0',transition:'background .5s'}}>
+          {row.map((cell,ci)=>(
+            <div key={ci} style={{flex:ci===3?2:ci===4?1.2:1,padding:'5px 8px',borderRight:'1px solid #f0f0f0',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:ci===1?tyC[cell]||'#374151':ci===4?'#1e40af':'#374151',fontWeight:ci===4?600:400}}>
+              {cell}
+            </div>
+          ))}
+        </div>
+      ))}
+      <div style={{background:'#fce4d6',display:'flex',borderTop:'2px solid #000'}}>
+        <div style={{flex:3,padding:'5px 8px',fontWeight:700,color:'#7c2d12',fontSize:10}}>TOTAL GENERAL</div>
+        <div style={{flex:1.2,padding:'5px 8px',fontWeight:700,color:'#1e40af',textAlign:'right'}}>$189,440.00</div>
+      </div>
+      <div style={{background:'#f3f4f6',padding:'4px 10px',display:'flex',gap:12,alignItems:'center'}}>
+        {['Hoja1','Ingresos','Gastos'].map((s,i)=>(
+          <div key={i} style={{padding:'2px 10px',background:i===0?'#fff':'transparent',border:i===0?'1px solid #d1d5db':'none',borderRadius:3,fontSize:9,color:i===0?'#111':'#6b7280',cursor:'pointer'}}>{s}</div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const GoogleIcon=()=>(
+  <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+    <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+    <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+  </svg>
+);
+
+const HomePage=({onStart,user,onSignIn,onSignOut})=>{
+  const [email,setEmail]=useState('');
+  const [pass,setPass]=useState('');
+  const [mode,setMode]=useState('login');
+  const [authLoading,setAuthLoading]=useState(false);
+  const [authError,setAuthError]=useState('');
+  const [authMsg,setAuthMsg]=useState('');
+  const loginRef=useRef(null);
+  const refs=useRef([]);
+  useEffect(()=>{
+    const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis');}),{threshold:.15});
+    refs.current.forEach(r=>r&&obs.observe(r));
+    return()=>obs.disconnect();
+  },[]);
+  const su=(i)=>el=>{refs.current[i]=el;};
+
+  const scrollToLogin=()=>loginRef.current?.scrollIntoView({behavior:'smooth',block:'center'});
+
+  const handleGoogle=async()=>{
+    if(!sb){setAuthError('Configura Supabase primero (ver comentarios en el código).');return;}
+    setAuthError('');setAuthLoading(true);
+    const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href.split('?')[0].split('#')[0]}});
+    if(error){setAuthError(error.message);setAuthLoading(false);}
+  };
+
+  const handleEmailAuth=async(e)=>{
+    e.preventDefault();
+    if(!sb){setAuthError('Configura Supabase primero (ver comentarios en el código).');return;}
+    if(!email||!pass){setAuthError('Ingresa correo y contraseña.');return;}
+    setAuthError('');setAuthMsg('');setAuthLoading(true);
+    if(mode==='login'){
+      const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+      setAuthLoading(false);
+      if(error){setAuthError(error.message==='Invalid login credentials'?'Correo o contraseña incorrectos.':error.message);}
+      else{onSignIn(data.user);}
+    } else {
+      const {error}=await sb.auth.signUp({email,password:pass});
+      setAuthLoading(false);
+      if(error){setAuthError(error.message);}
+      else{setAuthMsg('Revisa tu correo para confirmar tu cuenta.');setEmail('');setPass('');}
+    }
+  };
+
+  const steps=[
+    {n:'01',t:'Arrastra tus XML',d:'Archivos sueltos o carpetas completas. Sin límite de cantidad.'},
+    {n:'02',t:'Selecciona tu RFC',d:'La app clasifica automáticamente Ingresos y Egresos.'},
+    {n:'03',t:'Descarga',d:'Excel con formato, PDF o ambos con un solo clic.'},
+  ];
+  const inp={width:'100%',padding:'10px 13px',borderRadius:8,background:'#f8fafc',border:'1px solid #e2e8f0',color:'#1e293b',fontSize:13,marginBottom:10,boxSizing:'border-box',fontFamily:'Inter,sans-serif',outline:'none'};
+  const displayName=user?.user_metadata?.full_name||user?.user_metadata?.name||user?.email?.split('@')[0]||'Usuario';
+  const avatarUrl=user?.user_metadata?.avatar_url;
+  return(
+    <div style={{minHeight:'100vh',fontFamily:'Inter,sans-serif',background:'var(--hp-bg)',color:'var(--hp-t1)'}}>
+      {/* NAV */}
+      <nav style={{position:'sticky',top:0,zIndex:100,background:'rgba(250,250,250,.97)',backdropFilter:'blur(12px)',borderBottom:'1px solid var(--hp-b)',padding:'0 32px',height:60,display:'flex',alignItems:'center',justifyContent:'space-between',boxShadow:'0 1px 3px rgba(0,0,0,.06)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <div style={{width:34,height:34,background:'#16a34a',borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="1" width="7" height="7" rx="1.5" fill="#fff" opacity=".9"/><rect x="10" y="1" width="7" height="7" rx="1.5" fill="#fff" opacity=".6"/><rect x="1" y="10" width="7" height="7" rx="1.5" fill="#fff" opacity=".6"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill="#fff" opacity=".85"/></svg>
+          </div>
+          <div>
+            <p style={{fontWeight:700,fontSize:14,margin:0,color:'var(--hp-t1)'}}>SAT CFDI Processor</p>
+            <p style={{fontSize:9,color:'var(--hp-t3)',margin:0,letterSpacing:'.05em'}}>CFDI 3.3 / 4.0 · 100% Local</p>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          {user ? (
+            <>
+              <div style={{display:'flex',alignItems:'center',gap:7}}>
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="" style={{width:28,height:28,borderRadius:'50%',border:'2px solid var(--hp-green-bd)'}}/>
+                  : <div style={{width:28,height:28,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:12,fontWeight:700}}>{displayName[0].toUpperCase()}</div>
+                }
+                <span style={{fontSize:12,color:'var(--hp-t2)',fontWeight:500}}>{displayName}</span>
+              </div>
+              <button onClick={onStart} style={{padding:'7px 16px',borderRadius:7,background:'#16a34a',border:'none',color:'#fafafa',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>Abrir app</button>
+              <button onClick={onSignOut} style={{padding:'7px 14px',borderRadius:7,background:'transparent',border:'1px solid var(--hp-b)',color:'var(--hp-t2)',fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>Cerrar sesión</button>
+            </>
+          ) : (
+            <>
+              <button onClick={scrollToLogin} style={{padding:'7px 16px',borderRadius:7,background:'transparent',border:'1px solid var(--hp-b)',color:'var(--hp-t2)',fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>Iniciar sesión</button>
+              <button onClick={onStart} style={{padding:'8px 20px',borderRadius:8,background:'#16a34a',border:'none',color:'#fafafa',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>
+                Comenzar gratis
+              </button>
+              <button onClick={onStart} style={{padding:'7px 14px',borderRadius:7,background:'#fef3c7',border:'1px solid #fde68a',color:'#92400e',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif'}} title="Botón provisional para desarrollo">
+                🚧 Ver app
+              </button>
+            </>
+          )}
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <div style={{maxWidth:1180,margin:'0 auto',padding:'80px 32px 64px'}}>
+        <div className="hp-hero-grid">
+          <div className="hp-fadein">
+            <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 12px',borderRadius:20,background:'var(--hp-green-bg)',border:'1px solid var(--hp-green-bd)',fontSize:11,color:'var(--hp-green-text)',marginBottom:24,fontWeight:600,letterSpacing:'.06em'}}>
+              <span style={{width:6,height:6,borderRadius:'50%',background:'#16a34a',display:'inline-block'}}/>
+              SIN INTERNET · SIN API · 100% LOCAL
+            </div>
+            <h1 style={{fontSize:46,fontWeight:800,lineHeight:1.12,marginBottom:20,letterSpacing:'-.025em',color:'var(--hp-t1)'}}>
+              Procesa tus<br/>
+              <span style={{color:'#16a34a'}}>XML del SAT</span><br/>
+              sin servidores
+            </h1>
+            <p style={{fontSize:15,color:'var(--hp-t2)',lineHeight:1.75,marginBottom:36,maxWidth:420}}>
+              Carga, clasifica y exporta comprobantes fiscales directamente en tu navegador. Tus datos nunca salen de tu equipo.
+            </p>
+            <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:32}}>
+              <button onClick={onStart} style={{padding:'13px 30px',borderRadius:10,background:'#16a34a',border:'none',color:'#fafafa',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>
+                {user?'Abrir app':'Empezar ahora — gratis'}
+              </button>
+              {!user&&<button onClick={scrollToLogin} style={{padding:'13px 24px',borderRadius:10,background:'var(--hp-bg)',border:'1px solid var(--hp-b)',color:'var(--hp-t2)',fontSize:14,fontWeight:500,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>
+                Iniciar sesión
+              </button>}
+            </div>
+            <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
+              {['Sin registro','Sin API keys','Sin límites de XML','Exporta Excel + PDF'].map((b,i)=>(
+                <span key={i} style={{fontSize:12,color:'var(--hp-t2)',display:'flex',alignItems:'center',gap:5}}>
+                  <span style={{color:'#16a34a',fontWeight:700}}>✓</span>{b}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
+            <XlMockup/>
+          </div>
+        </div>
+      </div>
+
+      {/* STEPS */}
+      <div style={{background:'var(--hp-raised)',borderTop:'1px solid var(--hp-b)',borderBottom:'1px solid var(--hp-b)',padding:'56px 32px'}}>
+        <div style={{maxWidth:900,margin:'0 auto'}}>
+          <div ref={su(0)} className="hp-su" style={{textAlign:'center',marginBottom:40}}>
+            <p style={{fontSize:11,fontWeight:600,color:'#16a34a',letterSpacing:'.1em',marginBottom:10}}>¿CÓMO FUNCIONA?</p>
+            <h2 style={{fontSize:28,fontWeight:700,color:'var(--hp-t1)',margin:0}}>Tres pasos, listo</h2>
+          </div>
+          <div className="hp-steps-grid">
+            {steps.map((s,i)=>{
+              const icons=[
+                <svg key="f" width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 6a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V6z" fill="#16a34a" opacity=".8"/></svg>,
+                <svg key="r" width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="5" width="16" height="12" rx="2" fill="#16a34a" opacity=".15"/><path d="M7 11h8M7 14h5" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round"/><rect x="7" y="8" width="8" height="1.5" rx=".75" fill="#16a34a"/></svg>,
+                <svg key="d" width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 3v10m0 0l-4-4m4 4l4-4" stroke="#16a34a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><path d="M4 16h14" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+              ];
+              return(
+              <div ref={su(i+1)} className="hp-su" key={i} style={{transitionDelay:`${i*.12}s`,textAlign:'center',padding:'28px 20px',borderRadius:14,background:'var(--card)',border:'1px solid var(--hp-b)',boxShadow:'0 2px 8px rgba(0,0,0,.04)'}}>
+                <div style={{width:52,height:52,borderRadius:14,background:'var(--hp-green-bg)',border:'1px solid var(--hp-green-bd)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+                  {icons[i]}
+                </div>
+                <div style={{fontSize:11,fontWeight:700,color:'#16a34a',letterSpacing:'.08em',marginBottom:6}}>PASO {s.n}</div>
+                <p style={{fontWeight:700,fontSize:14,color:'var(--hp-t1)',marginBottom:8,margin:'0 0 8px'}}>{s.t}</p>
+                <p style={{fontSize:12,color:'var(--hp-t2)',lineHeight:1.65,margin:0}}>{s.d}</p>
+              </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* FEATURES */}
+      <div style={{maxWidth:1100,margin:'0 auto',padding:'72px 32px'}}>
+        <div ref={su(4)} className="hp-su" style={{marginBottom:48}}>
+          <p style={{fontSize:11,fontWeight:600,color:'#16a34a',letterSpacing:'.1em',marginBottom:10}}>CARACTERÍSTICAS</p>
+          <h2 style={{fontSize:28,fontWeight:700,color:'var(--hp-t1)',maxWidth:520,lineHeight:1.25}}>Todo lo que necesitas para gestionar CFDIs</h2>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px 48px'}}>
+          {[
+            {n:'01',t:'Carga XML masiva',d:'Arrastra archivos, carpetas o ZIPs completos. Detecta duplicados y extrae los XML automáticamente.'},
+            {n:'02',t:'Clasificación por RFC',d:'Selecciona tu contribuyente y cada factura se clasifica como Ingreso o Egreso en tiempo real.'},
+            {n:'03',t:'Vista previa Excel',d:'Tabla con colores, totales por mes y filtros antes de exportar. Lo que ves es lo que obtienes.'},
+            {n:'04',t:'Excel profesional + PDF',d:'Encabezados, colores corporativos, merges automáticos y totales. Separación en hojas o archivos.'},
+          ].map((f,i)=>(
+            <div ref={su(i+5)} className="hp-su" key={i}
+              style={{transitionDelay:`${i*.08}s`,display:'flex',gap:20,padding:'22px 0',borderBottom:'1px solid var(--hp-b)'}}>
+              <span style={{fontFamily:'monospace',fontWeight:700,fontSize:13,color:'#16a34a',opacity:.7,flexShrink:0,minWidth:24,paddingTop:1}}>{f.n}</span>
+              <div>
+                <p style={{fontWeight:700,fontSize:14,color:'var(--hp-t1)',marginBottom:6}}>{f.t}</p>
+                <p style={{fontSize:13,color:'var(--hp-t2)',lineHeight:1.65}}>{f.d}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* LOGIN / ACCESO */}
+      <div ref={loginRef} style={{background:'var(--hp-green-bg)',borderTop:'1px solid var(--hp-green-bd)',borderBottom:'1px solid var(--hp-green-bd)',padding:'72px 32px'}}>
+        <div style={{maxWidth:960,margin:'0 auto'}}>
+          <div className="hp-login-grid">
+            <div ref={su(9)} className="hp-su">
+              <p style={{fontSize:11,fontWeight:600,color:'#16a34a',letterSpacing:'.1em',marginBottom:12}}>ACCESO</p>
+              <h2 style={{fontSize:30,fontWeight:800,color:'var(--hp-t1)',marginBottom:14,lineHeight:1.2}}>Empieza ahora,<br/>sin tarjeta</h2>
+              <p style={{fontSize:14,color:'var(--hp-t2)',lineHeight:1.72,marginBottom:24}}>Puedes usar la app completa sin crear cuenta. Inicia sesión para guardar tu historial de contribuyentes y activar alertas de vencimiento de eFirma.</p>
+              {['Historial de contribuyentes guardado','Alertas de vencimiento de eFirma','Colaboración en despacho contable','Exportaciones Excel + PDF ilimitadas'].map((b,i)=>(
+                <p key={i} style={{fontSize:13,color:'var(--hp-t1)',display:'flex',alignItems:'flex-start',gap:8,margin:'0 0 10px'}}>
+                  <span style={{color:'#16a34a',fontWeight:700,flexShrink:0,marginTop:1}}>✓</span>{b}
+                </p>
+              ))}
+            </div>
+            <div ref={su(10)} className="hp-su" style={{transitionDelay:'.1s'}}>
+              {user ? (
+                <div style={{padding:'32px',borderRadius:16,background:'var(--card)',boxShadow:'0 8px 32px rgba(0,0,0,.07)',border:'1px solid var(--hp-b)',textAlign:'center'}}>
+                  {avatarUrl
+                    ? <img src={avatarUrl} alt="" style={{width:64,height:64,borderRadius:'50%',border:'3px solid var(--hp-green-bd)',margin:'0 auto 16px',display:'block'}}/>
+                    : <div style={{width:64,height:64,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:24,fontWeight:700,margin:'0 auto 16px'}}>{displayName[0].toUpperCase()}</div>
+                  }
+                  <p style={{fontWeight:700,fontSize:16,color:'var(--hp-t1)',marginBottom:4}}>Hola, {displayName}</p>
+                  <p style={{fontSize:12,color:'var(--hp-t3)',marginBottom:24}}>{user.email}</p>
+                  <button onClick={onStart} style={{width:'100%',padding:'12px',borderRadius:9,background:'#16a34a',border:'none',color:'#fafafa',fontSize:13,fontWeight:700,cursor:'pointer',marginBottom:10,fontFamily:'Inter,sans-serif'}}>
+                    Abrir app
+                  </button>
+                  <button onClick={onSignOut} style={{width:'100%',padding:'11px',borderRadius:9,background:'transparent',border:'1px solid var(--hp-b)',color:'var(--hp-t2)',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>
+                    Cerrar sesión
+                  </button>
+                </div>
+              ) : (
+                <div style={{padding:'32px',borderRadius:16,background:'var(--card)',boxShadow:'0 8px 32px rgba(0,0,0,.07)',border:'1px solid var(--hp-b)'}}>
+                  <div style={{display:'flex',gap:0,marginBottom:20,borderRadius:8,overflow:'hidden',border:'1px solid var(--hp-b)'}}>
+                    {['login','signup'].map((m,i)=>(
+                      <button key={m} onClick={()=>{setMode(m);setAuthError('');setAuthMsg('');}} style={{flex:1,padding:'9px',fontSize:12,fontWeight:mode===m?700:500,cursor:'pointer',border:'none',background:mode===m?'#1a1d23':'transparent',color:mode===m?'#fafafa':'var(--hp-t2)',fontFamily:'Inter,sans-serif',transition:'all .15s'}}>
+                        {m==='login'?'Iniciar sesión':'Crear cuenta'}
+                      </button>
+                    ))}
+                  </div>
+                  {!sb&&<div style={{background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8,padding:'10px 14px',fontSize:11,color:'#92400e',marginBottom:16}}>
+                    Supabase no configurado. Edita el archivo y añade tu URL y anon key para activar el login.
+                  </div>}
+                  <button onClick={handleGoogle} disabled={authLoading} style={{width:'100%',padding:'11px',borderRadius:9,background:'var(--card)',border:'1px solid var(--hp-b)',color:'var(--hp-t1)',fontSize:13,fontWeight:500,cursor:authLoading?'not-allowed':'pointer',marginBottom:14,fontFamily:'Inter,sans-serif',display:'flex',alignItems:'center',justifyContent:'center',gap:8,opacity:authLoading?.7:1}}>
+                    <GoogleIcon/>{mode==='login'?'Continuar con Google':'Registrarse con Google'}
+                  </button>
+                  <div style={{display:'flex',alignItems:'center',gap:10,margin:'0 0 14px'}}>
+                    <div style={{flex:1,height:1,background:'var(--hp-b)'}}/><span style={{fontSize:11,color:'var(--hp-t3)'}}>o con correo</span><div style={{flex:1,height:1,background:'var(--hp-b)'}}/>
+                  </div>
+                  <form onSubmit={handleEmailAuth}>
+                    <label style={{display:'block'}}>
+                      <span className="sr-only">Correo electrónico</span>
+                      <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="Correo electrónico" type="email" autoComplete="email" aria-label="Correo electrónico" style={inp} required/>
+                    </label>
+                    <label style={{display:'block'}}>
+                      <span className="sr-only">Contraseña</span>
+                      <input value={pass} onChange={e=>setPass(e.target.value)} placeholder="Contraseña" type="password" autoComplete={mode==='login'?'current-password':'new-password'} aria-label="Contraseña" style={{...inp,marginBottom:6}} required minLength={6}/>
+                    </label>
+                    {authError&&<p role="alert" style={{fontSize:11,color:'var(--red)',margin:'4px 0 10px',lineHeight:1.4}}>{authError}</p>}
+                    {authMsg&&<p role="status" style={{fontSize:11,color:'#16a34a',margin:'4px 0 10px',lineHeight:1.4}}>{authMsg}</p>}
+                    <button type="submit" disabled={authLoading} style={{width:'100%',padding:'12px',borderRadius:9,background:'#16a34a',border:'none',color:'#fafafa',fontSize:13,fontWeight:700,cursor:authLoading?'not-allowed':'pointer',marginTop:8,marginBottom:12,fontFamily:'Inter,sans-serif',opacity:authLoading?.7:1}}>
+                      {authLoading?'Procesando...':(mode==='login'?'Entrar':'Crear cuenta')}
+                    </button>
+                  </form>
+                  <div style={{display:'flex',alignItems:'center',gap:10,margin:'0 0 12px'}}>
+                    <div style={{flex:1,height:1,background:'var(--hp-b)'}}/><span style={{fontSize:11,color:'var(--hp-t3)'}}>o</span><div style={{flex:1,height:1,background:'var(--hp-b)'}}/>
+                  </div>
+                  <button onClick={onStart} style={{width:'100%',padding:'11px',borderRadius:9,background:'var(--hp-raised)',border:'1px solid var(--hp-b)',color:'var(--hp-t2)',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>
+                    Continuar sin cuenta
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <footer style={{borderTop:'1px solid var(--hp-b)',padding:'20px 32px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{width:26,height:26,background:'#16a34a',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" fill="#fafafa" opacity=".9"/><rect x="8" y="1" width="5" height="5" rx="1" fill="#fafafa" opacity=".55"/><rect x="1" y="8" width="5" height="5" rx="1" fill="#fafafa" opacity=".55"/><rect x="8" y="8" width="5" height="5" rx="1" fill="#fafafa" opacity=".85"/></svg>
+          </div>
+          <span style={{fontSize:12,fontWeight:600,color:'var(--hp-t1)'}}>SAT CFDI Processor</span>
+        </div>
+        <p style={{fontSize:11,color:'var(--hp-t3)',margin:0}}>Procesamiento 100% local · Tus datos nunca salen de tu equipo</p>
+      </footer>
+    </div>
+  );
+};
+
+/* ══ MODAL SEPARACIÓN ══ */
+const SepModal=({onClose,onSelect,cur})=>{
+  const closeRef=useRef(null);
+  useEffect(()=>{
+    closeRef.current?.focus();
+    const prev=document.activeElement;
+    return()=>prev?.focus();
+  },[]);
+  const onKey=e=>{if(e.key==='Escape')onClose();};
+  return(
+  <div role="dialog" aria-modal="true" aria-labelledby="sep-modal-title"
+    onKeyDown={onKey}
+    style={{position:'fixed',inset:0,zIndex:300,display:'flex',alignItems:'center',justifyContent:'center',padding:16,background:'rgba(0,0,0,.35)',backdropFilter:'blur(4px)'}}>
+    <div className="card fade-up" style={{width:'100%',maxWidth:400,padding:22}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:18}}>
+        <div>
+          <p id="sep-modal-title" style={{fontWeight:600,fontSize:14}}>Separar Ingresos / Gastos</p>
+          <p style={{color:'var(--t2)',fontSize:11,marginTop:3}}>¿Cómo organizar la exportación?</p>
+        </div>
+        <button ref={closeRef} className="btn btn-sm" onClick={onClose} aria-label="Cerrar">✕</button>
+      </div>
+      {[{k:'misma',t:'Una hoja',d:'Todo junto con secciones marcadas.'},
+        {k:'dos-hojas',t:'Dos hojas',d:'Un .xlsx con pestañas Ingresos / Gastos.'},
+        {k:'dos-archivos',t:'Dos archivos',d:'Dos .xlsx independientes por tipo.'}].map(o=>(
+        <button key={o.k} onClick={()=>onSelect(o.k)} style={{width:'100%',textAlign:'left',padding:'10px 12px',borderRadius:7,marginBottom:7,cursor:'pointer',transition:'all .15s',background:cur===o.k?'#eff6ff':'var(--card)',border:cur===o.k?'1.5px solid #2563eb':'1px solid var(--b1)',display:'block'}}>
+          <p style={{fontWeight:500,fontSize:13}}>{o.t}</p>
+          <p style={{color:'var(--t2)',fontSize:11,marginTop:3}}>{o.d}</p>
+        </button>
+      ))}
+    </div>
+  </div>
+  );
+};
+
+/* ══ CONFIRM MODAL ══ */
+const ConfirmModal=({title,msg,onConfirm,onCancel})=>{
+  const btnRef=useRef(null);
+  useEffect(()=>{btnRef.current?.focus();},[]);
+  return(
+  <div role="dialog" aria-modal="true" aria-labelledby="confirm-title"
+    onKeyDown={e=>{if(e.key==='Escape')onCancel();}}
+    style={{position:'fixed',inset:0,zIndex:300,display:'flex',alignItems:'center',justifyContent:'center',padding:16,background:'rgba(0,0,0,.38)',backdropFilter:'blur(4px)'}}>
+    <div className="card fade-up" style={{width:'100%',maxWidth:360,padding:22}}>
+      <p id="confirm-title" style={{fontWeight:700,fontSize:14,marginBottom:7}}>{title}</p>
+      <p style={{color:'var(--t2)',fontSize:12,marginBottom:20,lineHeight:1.55}}>{msg}</p>
+      <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+        <button className="btn btn-sm" onClick={onCancel}>Cancelar</button>
+        <button ref={btnRef} className="btn btn-sm btn-d" onClick={onConfirm}>Eliminar</button>
+      </div>
+    </div>
+  </div>
+  );
+};
+
+/* ══ PANEL SECTION ══ */
+const PanelSection=({title,defaultOpen=true,children})=>{
+  const [open,setOpen]=React.useState(defaultOpen);
+  return(
+    <div className="ps-section">
+      <button className="ps-hdr" aria-expanded={open} onClick={()=>setOpen(o=>!o)}>
+        <span style={{fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'var(--t2)'}}>{title}</span>
+        <span className={`ps-chev${open?' open':''}`}>▼</span>
+      </button>
+      <div className={`ps-body${open?' ps-open':''}`}>
+        <div className="ps-inner">
+          <div style={{padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ══ TABLA EXCEL ══ */
+const ExcelTable=({rows,xf,visCols,tab,setTab,onHideCol,onMoveCol})=>{
+  const [colMenu,setColMenu]=useState(null);
+  const [movingCol,setMovingCol]=useState(null);
+  const dr=useMemo(()=>{
+    let r=xf.separar&&xf.sepModo==='dos-hojas'?rows.filter(x=>tab==='I'?x._tipo==='I':x._tipo==='E'):[...rows];
+    if(xf.ordenFecha==='asc')r.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    if(xf.ordenFecha==='desc')r.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    return r;
+  },[rows,xf,tab]);
+  const totalCols=visCols.length;
+  const nonNumCount=visCols.filter(c=>!c.numeric).length;
+  const Num=({col,v,b})=>{
+    if(!v&&v!==0||v===0)return<td className="xl-zero" style={b?{fontWeight:700}:{}}>—</td>;
+    return<td className="xl-num" style={b?{fontWeight:700}:{}}>{col.currency===false?numFmt(v):peso(v)}</td>;
+  };
+  const ColHdr=()=>(
+    <tr>{visCols.map((c,ci)=>{
+      const isMoving=movingCol===c.key;
+      return(
+      <th key={c.key} className={`xl-th${c.numeric?' n':''}`}
+        style={{position:'static',zIndex:1,cursor:'pointer',userSelect:'none',...(isMoving?{background:'#dbeafe',outline:'2px solid #3b82f6',outlineOffset:'-1px'}:{})}}
+        onClick={e=>{e.stopPropagation();if(movingCol){setMovingCol(null);return;}setColMenu(cm=>cm?.key===c.key?null:{key:c.key,label:c.label,x:e.clientX,y:e.clientY});}}>
+        {isMoving?(
+          <span style={{display:'flex',alignItems:'center',gap:2,justifyContent:'center'}}>
+            <button onClick={e=>{e.stopPropagation();onMoveCol&&onMoveCol(c.key,-1);}} style={{background:'none',border:'none',cursor:'pointer',color:'#1d4ed8',fontWeight:800,fontSize:14,padding:'0 3px',lineHeight:1}}>‹</button>
+            <span>{c.label}</span>
+            <button onClick={e=>{e.stopPropagation();onMoveCol&&onMoveCol(c.key,1);}} style={{background:'none',border:'none',cursor:'pointer',color:'#1d4ed8',fontWeight:800,fontSize:14,padding:'0 3px',lineHeight:1}}>›</button>
+          </span>
+        ):c.label}
+      </th>
+      );
+    })}</tr>
+  );
+  const DataRow=({row,idx})=>(
+    <tr className={idx%2===0?'xl-even':'xl-odd'}>
+      {visCols.map(c=>{
+        if(c.numeric)return<Num key={c.key} col={c} v={row[c.key]}/>;
+        let val=row[c.key]||'—';
+        if(c.key==='tipo_cfdi')val=<span className={{I:'xi',E:'xe',T:'xt'}[row['_tipo']]||''}>{tipoLabel(row['_tipo'])}</span>;
+        else if(c.key==='fecha'||c.key==='fecha_tim')val=row[c.key]?.slice(0,10)||'—';
+        else if(c.key==='uuid')val=<span title={row[c.key]} style={{fontFamily:'monospace',fontSize:9.5}}>{row[c.key]?row[c.key].slice(0,8)+'…':''}</span>;
+        return<td key={c.key} style={{maxWidth:c.key==='descripcion'||c.key==='nom_em'||c.key==='nom_re'?220:c.key==='uuid'?100:160,overflow:'hidden',textOverflow:'ellipsis'}}>{val}</td>;
+      })}
+    </tr>
+  );
+  const TotRow=({subRows,label,cls='xl-mtot'})=>{
+    const s=sumN(subRows,visCols.filter(c=>c.numeric));
+    let labeled=false;
+    return(<tr className={cls}>
+      {visCols.map(c=>{
+        if(!c.numeric){
+          if(!labeled){labeled=true;return<td key={c.key} style={{fontWeight:700,fontSize:10}}>{label}</td>;}
+          return<td key={c.key}></td>;
+        }
+        if(c.noSum)return<td key={c.key} className="xl-zero"></td>;
+        return<Num key={c.key} col={c} v={s[c.key]||0} b/>;
+      })}
+    </tr>);
+  };
+  const Blank=()=><tr className="xl-blank">{Array(totalCols).fill(null).map((_,i)=><td key={i}>&nbsp;</td>)}</tr>;
+  const MHdr=({label,bg,fg})=><tr className="xl-mhdr" style={bg?{background:bg}:{}}><td colSpan={totalCols} style={fg?{color:fg}:{}}>{label.toUpperCase()}</td></tr>;
+  const YearHdr=({yr})=><tr><td colSpan={totalCols} style={{background:'#1e3a5f',color:'#fff',fontWeight:700,fontSize:11,padding:'5px 8px',letterSpacing:'.05em'}}>{'▶ AÑO '+yr}</td></tr>;
+  const buildMonthRows=subRows=>{
+    const map=new Map();subRows.forEach(r=>{const k=monthKey(r.fecha);if(!map.has(k))map.set(k,[]);map.get(k).push(r);});
+    const sorted=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+    return(<>{sorted.map(([k,mr])=>(<React.Fragment key={k}>
+      <MHdr label={monthLabel(k)}/>
+      <ColHdr/>
+      {mr.map((r,i)=><DataRow key={i} row={r} idx={i}/>)}
+      <TotRow subRows={mr} label={`Total ${monthLabel(k)}`}/>
+      <Blank/><Blank/>
+    </React.Fragment>))}</>);
+  };
+  const buildRows=subRows=>{
+    if(!xf.sumasMensuales)return(<>
+      {subRows.map((r,i)=><DataRow key={i} row={r} idx={i}/>)}
+      {subRows.length>0&&<TotRow subRows={subRows} label="TOTAL GENERAL" cls="xl-gtot"/>}
+    </>);
+    const yrMap=new Map();subRows.forEach(r=>{const yr=r.fecha?r.fecha.slice(0,4):'????';if(!yrMap.has(yr))yrMap.set(yr,[]);yrMap.get(yr).push(r);});
+    const yrs=[...yrMap.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+    if(yrs.length===1)return(<>{buildMonthRows(subRows)}{subRows.length>0&&<TotRow subRows={subRows} label="TOTAL GENERAL" cls="xl-gtot"/>}</>);
+    return(<>{yrs.map(([yr,yrows])=>(<React.Fragment key={yr}>
+      <YearHdr yr={yr}/>
+      {buildMonthRows(yrows)}
+      <TotRow subRows={yrows} label={`TOTAL ${yr}`} cls="xl-gtot"/>
+      <Blank/><Blank/>
+    </React.Fragment>))}
+    <TotRow subRows={subRows} label="TOTAL GENERAL" cls="xl-gtot"/>
+    </>);
+  };
+  useEffect(()=>{
+    if(!colMenu)return;
+    const close=()=>setColMenu(null);
+    document.addEventListener('click',close);
+    return()=>document.removeEventListener('click',close);
+  },[colMenu]);
+  useEffect(()=>{
+    if(!movingCol)return;
+    const onKey=e=>{
+      if(e.key==='ArrowLeft'){e.preventDefault();onMoveCol&&onMoveCol(movingCol,-1);}
+      else if(e.key==='ArrowRight'){e.preventDefault();onMoveCol&&onMoveCol(movingCol,1);}
+      else if(e.key==='Enter'||e.key==='Escape')setMovingCol(null);
+    };
+    const onOut=()=>setMovingCol(null);
+    document.addEventListener('keydown',onKey);
+    document.addEventListener('click',onOut);
+    return()=>{document.removeEventListener('keydown',onKey);document.removeEventListener('click',onOut);};
+  },[movingCol,onMoveCol]);
+  if(!dr.length)return(<div style={{textAlign:'center',padding:'40px 20px',color:'var(--t3)',fontSize:12,background:'#fff',borderRadius:4,border:'1px solid #d0d0d0'}}>Sin datos · procesa XML para ver la vista previa.</div>);
+  return(
+    <div className="xl-wrap">
+      {colMenu&&(
+        <div onClick={e=>e.stopPropagation()} style={{position:'fixed',top:colMenu.y+4,left:colMenu.x,zIndex:9999,background:'#fff',border:'1px solid #d0d0d0',borderRadius:7,boxShadow:'0 6px 20px rgba(0,0,0,.14)',minWidth:170,overflow:'hidden'}}>
+          <div style={{padding:'7px 13px 5px',fontSize:11,color:'#555',fontWeight:600,borderBottom:'1px solid #eee',background:'#f7f7f7'}}>{colMenu.label}</div>
+          {(()=>{const tk=(xf.separar&&xf.sepModo==='dos-hojas')?tab:null;return(<>
+          <button style={{display:'block',width:'100%',padding:'8px 13px',background:'none',border:'none',textAlign:'left',cursor:'pointer',fontSize:12,color:'var(--t1)',fontWeight:500,borderBottom:'1px solid #eee'}}
+            onClick={e=>{e.stopPropagation();setMovingCol(colMenu.key);setColMenu(null);}}>
+            Recorrer ← →<span style={{fontSize:10,color:'var(--t3)',marginLeft:6}}>Enter o clic para salir</span>
+          </button>
+          <button style={{display:'block',width:'100%',padding:'8px 13px',background:'none',border:'none',textAlign:'left',cursor:'pointer',fontSize:12,color:'#dc2626',fontWeight:500}}
+            aria-label={`Ocultar columna ${colMenu.label}`}
+            onClick={()=>{onHideCol(colMenu.key,tk);setColMenu(null);}}>
+            Ocultar columna{tk?<span style={{fontSize:10,color:'#b45309',marginLeft:5}}>({tk==='I'?'solo Ingresos':'solo Gastos'})</span>:''}
+          </button>
+          </>);})()}
+        </div>
+      )}
+      {xf.separar&&xf.sepModo==='dos-hojas'&&(
+        <div style={{display:'flex',borderBottom:'1px solid #ccc',background:'#e5e5e5'}}>
+          {[{k:'I',l:'📋 Ingresos'},{k:'E',l:'📋 Gastos'}].map(t=>(
+            <button key={t.k} className={`sh-tab${tab===t.k?' active':''}`} onClick={()=>setTab(t.k)}>{t.l}</button>
+          ))}
+        </div>
+      )}
+      <div className="xl-scroll">
+        <table className="xl-table">
+          <thead><ColHdr/></thead>
+          <tbody>
+            {xf.separar&&xf.sepModo==='misma'?(<>
+              {rows.filter(r=>r._tipo==='I').length>0&&<>
+                <MHdr label="▶ Ingresos" bg="#e2efda" fg="#14532d"/>
+                <ColHdr/>
+                {buildRows(rows.filter(r=>r._tipo==='I'))}<Blank/><Blank/>
+              </>}
+              {rows.filter(r=>r._tipo==='E').length>0&&<>
+                <MHdr label="▶ Gastos / Egresos" bg="#fce4d6" fg="#7c2d12"/>
+                <ColHdr/>
+                {buildRows(rows.filter(r=>r._tipo==='E'))}<Blank/><Blank/>
+              </>}
+              {rows.filter(r=>!['I','E'].includes(r._tipo)).length>0&&buildRows(rows.filter(r=>!['I','E'].includes(r._tipo)))}
+            </>):buildRows(dr)}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+/* ══ TARJETA FACTURA ══ */
+const InvCard=({r,idx,tipoEfectivo})=>{
+  const ok=r.data?.ok,c=r.data?.comp||{},f=r.data?.fiscal||{};
+  const tipoColor={I:'var(--green)',E:'var(--red)',T:'var(--blue)'}[tipoEfectivo]||'var(--t2)';
+  return(
+    <div className="card fade-up" style={{animationDelay:`${idx*.04}s`,overflow:'hidden'}}>
+      <div style={{padding:'9px 13px',borderBottom:'1px solid var(--b1)',display:'flex',alignItems:'center',justifyContent:'space-between',background:ok?'rgba(22,163,74,.04)':'rgba(220,38,38,.04)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,minWidth:0}}>
+          <span style={{color:ok?'var(--green)':'var(--red)',flexShrink:0}}>{ok?'✓':'✕'}</span>
+          <div style={{minWidth:0}}>
+            <p style={{fontWeight:500,fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.name}</p>
+            {c.uuid&&<p style={{fontSize:9,fontFamily:'monospace',color:'var(--t3)',marginTop:1}}>{c.uuid.slice(0,18)}…</p>}
+          </div>
+        </div>
+        {tipoEfectivo&&<span style={{fontSize:10,fontWeight:600,padding:'2px 7px',borderRadius:3,background:'var(--raised)',color:tipoColor,flexShrink:0,marginLeft:8}}>{tipoLabel(tipoEfectivo)}</span>}
+      </div>
+      {ok?(
+        <div style={{padding:13,display:'flex',flexDirection:'column',gap:9}}>
+          <div style={{textAlign:'center'}}>
+            <p style={{fontSize:10,color:'var(--t3)',letterSpacing:'.06em',marginBottom:2}}>TOTAL</p>
+            <p style={{fontSize:22,fontWeight:700}}>{peso(f.total)}</p>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:5}}>
+            {[{l:'EMISOR',n:c.nomEm,r:c.rfcEm},{l:'RECEPTOR',n:c.nomRe,r:c.rfcRe}].map(x=>(
+              <div key={x.l} className="raised" style={{padding:'7px 9px'}}>
+                <p style={{fontSize:9,color:'var(--t3)',marginBottom:2}}>{x.l}</p>
+                <p style={{fontSize:11,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{x.n||'—'}</p>
+                <p style={{fontSize:10,fontFamily:'monospace',color:'var(--t2)',marginTop:1}}>{x.r||'—'}</p>
+              </div>
+            ))}
+          </div>
+          <div className="raised" style={{padding:'7px 9px'}}>
+            {[{l:'Subtotal',v:f.sub,s:true},{l:'Descuento',v:f.des,s:f.des>0},{l:'IVA',v:f.ivaFac,s:f.ivaFac>0},{l:'IEPS',v:f.iepsFac,s:f.iepsFac>0},{l:'Ret. IVA',v:f.retIvaF,s:f.retIvaF>0},{l:'Ret. ISR',v:f.retIsrF,s:f.retIsrF>0}].filter(x=>x.s).map((x,j)=>(
+              <div key={j} style={{display:'flex',justifyContent:'space-between',fontSize:11,padding:'2px 0'}}>
+                <span style={{color:'var(--t2)'}}>{x.l}</span><span style={{fontFamily:'monospace'}}>{peso(x.v)}</span>
+              </div>
+            ))}
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0 0',borderTop:'1px solid var(--b1)',marginTop:4,fontWeight:600}}><span>Total</span><span>{peso(f.total)}</span></div>
+          </div>
+          <div style={{display:'flex',gap:5}}>
+            {c.fecha&&<div className="raised" style={{flex:1,padding:'5px 9px'}}><p style={{fontSize:9,color:'var(--t3)',marginBottom:1}}>FECHA</p><p style={{fontSize:11}}>{c.fecha?.slice(0,10)}</p></div>}
+            {(c.serie||c.folio)&&<div className="raised" style={{flex:1,padding:'5px 9px'}}><p style={{fontSize:9,color:'var(--t3)',marginBottom:1}}>FOLIO</p><p style={{fontSize:11,fontFamily:'monospace'}}>{[c.serie,c.folio].filter(Boolean).join('-')}</p></div>}
+            {c.formaPago&&<div className="raised" style={{flex:1,padding:'5px 9px'}}><p style={{fontSize:9,color:'var(--t3)',marginBottom:1}}>FORMA PAGO</p><p style={{fontSize:11}}>{c.formaPago}</p></div>}
+          </div>
+          {r.data.concs?.length>0&&(
+            <div>
+              <p style={{fontSize:9,color:'var(--t3)',letterSpacing:'.04em',marginBottom:4}}>CONCEPTOS ({r.data.concs.length})</p>
+              <div style={{maxHeight:90,overflowY:'auto',display:'flex',flexDirection:'column',gap:3}}>
+                {r.data.concs.map((x,j)=>(
+                  <div key={j} className="raised" style={{padding:'4px 8px',display:'flex',justifyContent:'space-between',gap:8}}>
+                    <span style={{fontSize:10,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1,color:'var(--t2)'}}>{x.desc}</span>
+                    <span style={{fontSize:10,fontFamily:'monospace',flexShrink:0}}>{peso(x.importe)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {r.data.adv?.length>0&&<div style={{padding:'5px 9px',borderRadius:4,background:'rgba(217,119,6,.08)',border:'1px solid rgba(217,119,6,.2)',fontSize:10,color:'#92400e'}}>{r.data.adv.join(' · ')}</div>}
+        </div>
+      ):(
+        <div style={{padding:13}}><div style={{padding:'8px 12px',borderRadius:4,background:'rgba(220,38,38,.06)',border:'1px solid rgba(220,38,38,.15)',fontSize:11,color:'#dc2626'}}>{r.data?.err?.[0]||'Error desconocido'}</div></div>
+      )}
+    </div>
+  );
+};
+
+/* ══ PANTALLA DE PROCESAMIENTO ══ */
+const LOADING_PHRASES=[
+  'Cargando... Buscando el centavo que falta para que cuadre todo. No te muevas.',
+  '"La IA nos quitará el trabajo" — ¡NI LOCO ME VUELVO CONTADOR!',
+  'Calculando... El fisco ya se quedó con el 30% de esta barra de carga.',
+  'Cargando... Más lento que la página de Hacienda el último día de declaraciones.',
+  'Haciendo magia contable... (De la legal, obviamente).',
+  'Cargando... Mientras esperas, ve a estirar las piernas. Estar sentado todo el día es nuestro trabajo, no el tuyo.',
+  'Extrayendo los datos del XML antes de que el SAT se dé cuenta y cambie de formato.',
+];
+
+const ProcessingScreen=({prog,currentFile})=>{
+  const pct=prog.t>0?Math.round((prog.c/prog.t)*100):0;
+  const [phraseIdx,setPhraseIdx]=useState(()=>Math.floor(Math.random()*LOADING_PHRASES.length));
+  const [visible,setVisible]=useState(true);
+  useEffect(()=>{
+    const iv=setInterval(()=>{
+      setVisible(false);
+      setTimeout(()=>{
+        setPhraseIdx(p=>{
+          let n=Math.floor(Math.random()*LOADING_PHRASES.length);
+          while(n===p&&LOADING_PHRASES.length>1)n=Math.floor(Math.random()*LOADING_PHRASES.length);
+          return n;
+        });
+        setVisible(true);
+      },450);
+    },4500);
+    return()=>clearInterval(iv);
+  },[]);
+  return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'60px 32px',gap:52,flex:1}}>
+
+      {/* Frase rotante */}
+      <p style={{
+        maxWidth:460,textAlign:'center',fontSize:14,lineHeight:1.85,
+        color:'var(--t2)',fontStyle:'italic',
+        opacity:visible?1:0,
+        transition:'opacity 0.45s ease',
+        minHeight:80,display:'flex',alignItems:'center',justifyContent:'center',
+      }}>
+        {LOADING_PHRASES[phraseIdx]}
+      </p>
+
+      {/* Barra de progreso */}
+      <div style={{width:'100%',maxWidth:460}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:9}}>
+          {currentFile
+            ?<span style={{fontFamily:'monospace',fontSize:10,color:'var(--t3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'75%'}}>{currentFile}</span>
+            :<span style={{fontSize:10,color:'var(--t3)',fontWeight:600,letterSpacing:'.06em'}}>PROCESANDO</span>
+          }
+          <span style={{fontSize:10,fontFamily:'monospace',color:'var(--t3)',fontVariantNumeric:'tabular-nums',flexShrink:0,marginLeft:12}}>
+            {prog.c}<span style={{color:'var(--b2)'}}>/</span>{prog.t}
+          </span>
+        </div>
+        <div style={{height:3,background:'var(--raised)',borderRadius:99,overflow:'hidden',border:'1px solid var(--b1)'}}>
+          <div style={{
+            height:'100%',
+            width:`${pct}%`,
+            background:'linear-gradient(90deg,#16a34a,#22c55e)',
+            borderRadius:99,
+            transition:'width 0.5s cubic-bezier(.4,0,.2,1)',
+            boxShadow:'0 0 8px rgba(22,163,74,.35)',
+          }}/>
+        </div>
+        <div style={{marginTop:7,textAlign:'right',fontSize:11,fontWeight:700,color:pct>0?'var(--green)':'var(--t3)',fontVariantNumeric:'tabular-nums'}}>
+          {pct>0?`${pct}%`:'—'}
+        </div>
+      </div>
+
+    </div>
+  );
+};
+
+/* ══ CONTRIB DETAIL PANEL ══ */
+const ContribDetailPanel=({rfc,savedContribs,onSelectContrib,onUpdateEfirma,onBack})=>{
+  const contrib=savedContribs[rfc];
+  const [openCarpetas,setOpenCarpetas]=useState(new Set());
+  const [efirmaDate,setEfirmaDate]=useState(contrib?.efirmaVencimiento||'');
+  const [efirmaSaved,setEfirmaSaved]=useState(false);
+  useEffect(()=>{setEfirmaDate(contrib?.efirmaVencimiento||'');},[rfc]);
+  const toggle=n=>setOpenCarpetas(p=>{const s=new Set(p);s.has(n)?s.delete(n):s.add(n);return s;});
+  const saveEfirma=()=>{onUpdateEfirma(rfc,efirmaDate);setEfirmaSaved(true);setTimeout(()=>setEfirmaSaved(false),2200);};
+  const days=efirmaDate?Math.ceil((new Date(efirmaDate)-new Date())/(864e5)):null;
+  const urg=days===null?null:days<0?'vencida':days<30?'urgente':days<90?'pronto':'ok';
+  const urgColor={vencida:'var(--red)',urgente:'var(--red)',pronto:'var(--amber)',ok:'var(--green)'}[urg]||'var(--t2)';
+  const urgBg={vencida:'rgba(220,38,38,.09)',urgente:'rgba(220,38,38,.07)',pronto:'rgba(217,119,6,.08)',ok:'rgba(22,163,74,.08)'}[urg]||'var(--raised)';
+  if(!contrib)return null;
+  const allSaved=Object.values(savedContribs);
+  return(
+    <div style={{display:'flex',flexDirection:'column',gap:14,paddingBottom:32}}>
+      {/* Header */}
+      <div className="card" style={{padding:'14px 18px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+          <button className="btn btn-sm" onClick={onBack} style={{flexShrink:0}}>← Volver</button>
+          <div style={{flex:1,minWidth:0}}>
+            <p style={{fontWeight:700,fontSize:16,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--t1)'}}>{contrib.nombre||rfc}</p>
+            <p style={{fontSize:11,fontFamily:'monospace',color:'var(--t3)',marginTop:2}}>{rfc}</p>
+          </div>
+          {allSaved.length>1&&(
+            <select value={rfc} onChange={e=>onSelectContrib(e.target.value)}
+              style={{flexShrink:0,padding:'6px 10px',borderRadius:6,background:'var(--card)',border:'1px solid var(--b2)',fontSize:12,cursor:'pointer',color:'var(--t1)',maxWidth:220,fontFamily:'Inter,sans-serif'}}>
+              {allSaved.map(c=><option key={c.rfc} value={c.rfc}>{c.nombre||c.rfc}</option>)}
+            </select>
+          )}
+        </div>
+      </div>
+      {/* eFirma */}
+      <div className="card" style={{padding:'16px 18px'}}>
+        <p style={{fontSize:10,fontWeight:700,color:'var(--t2)',letterSpacing:'.07em',marginBottom:12}}>VENCIMIENTO eFIRMA</p>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          <input type="date" value={efirmaDate} onChange={e=>setEfirmaDate(e.target.value)}
+            style={{padding:'6px 10px',borderRadius:6,border:'1px solid var(--b2)',background:'var(--card)',fontSize:12,color:'var(--t1)',fontFamily:'Inter,sans-serif',cursor:'pointer'}}/>
+          <button className="btn btn-sm btn-green" onClick={saveEfirma} style={{padding:'6px 14px'}}>
+            {efirmaSaved?'✓ Guardado':'Guardar fecha'}
+          </button>
+          {days!==null&&(
+            <span style={{fontSize:11,fontWeight:600,padding:'3px 10px',borderRadius:20,background:urgBg,color:urgColor,border:`1px solid ${urgColor}33`}}>
+              {days<0?`Venció hace ${Math.abs(days)} día${Math.abs(days)!==1?'s':''}`:days===0?'Vence hoy':`Vence en ${days} día${days!==1?'s':''}`}
+            </span>
+          )}
+        </div>
+        {!efirmaDate&&<p style={{fontSize:10,color:'var(--t3)',marginTop:8,lineHeight:1.5}}>Sin fecha registrada. Selecciona la fecha de vencimiento de la eFirma.</p>}
+      </div>
+      {/* Carpetas y XMLs */}
+      <div className="card" style={{padding:'16px 18px'}}>
+        <p style={{fontSize:10,fontWeight:700,color:'var(--t2)',letterSpacing:'.07em',marginBottom:12}}>CARPETAS Y ARCHIVOS</p>
+        {(!contrib.carpetas||contrib.carpetas.length===0)?(
+          <div style={{textAlign:'center',padding:'24px 16px'}}>
+            <p style={{fontSize:12,color:'var(--t3)',lineHeight:1.65}}>Sin archivos registrados.<br/>Carga XML y usa "Guardar contribuyente" para registrar sus archivos aquí.</p>
+          </div>
+        ):(
+          <div style={{display:'flex',flexDirection:'column',gap:3}}>
+            {contrib.carpetas.map((carp,ci)=>{
+              const isOpen=openCarpetas.has(carp.nombre);
+              return(
+                <div key={ci}>
+                  <button onClick={()=>toggle(carp.nombre)}
+                    style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'8px 11px',borderRadius:7,background:isOpen?'var(--raised)':'var(--card)',border:`1px solid ${isOpen?'var(--b1)':'transparent'}`,cursor:'pointer',fontFamily:'Inter,sans-serif',textAlign:'left',transition:'all .15s'}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c09020" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span style={{flex:1,fontSize:12,fontWeight:550,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{carp.nombre}</span>
+                    <span style={{fontSize:10,color:'var(--t3)',flexShrink:0,marginRight:4}}>{(carp.xmls||[]).length} XML</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{color:'var(--t3)',transform:isOpen?'rotate(180deg)':'none',transition:'transform .2s',flexShrink:0}}>
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                  {isOpen&&(
+                    <div style={{paddingLeft:20,display:'flex',flexDirection:'column',gap:2,marginTop:3,marginBottom:4}}>
+                      {(carp.xmls||[]).length===0
+                        ?<p style={{fontSize:11,color:'var(--t3)',padding:'4px 8px'}}>Sin archivos XML</p>
+                        :(carp.xmls||[]).map((xml,xi)=>(
+                          <div key={xi} style={{display:'flex',alignItems:'center',gap:7,padding:'5px 10px',borderRadius:5,background:'var(--raised)',border:'1px solid var(--b1)'}}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+                              <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                            </svg>
+                            <span style={{flex:1,fontSize:11,color:'var(--t2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{xml.nombre}</span>
+                            <span style={{fontSize:10,fontFamily:'monospace',color:'var(--t3)',flexShrink:0}}>{xml.fecha?.slice(0,10)||''}</span>
+                            <span style={{fontSize:10,color:'var(--green)',flexShrink:0,fontVariantNumeric:'tabular-nums',fontWeight:600}}>{peso(xml.total)}</span>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <p style={{fontSize:10,color:'var(--t3)',textAlign:'center'}}>Guardado: {contrib.guardadoEn?new Date(contrib.guardadoEn).toLocaleString('es-MX'):'—'}</p>
+    </div>
+  );
+};
+
+/* ══════════════════════ APP ══════════════════════ */
+const App=()=>{
+  const [files,  setFiles]  =useState([]);
+  const [results,setResults]=useState([]);
+  const [skipped,setSkipped]=useState([]);
+  const [dupes,  setDupes]  =useState([]);
+  const [busy,   setBusy]   =useState(false);
+  const [drag,   setDrag]   =useState(false);
+  const [prog,   setProg]   =useState({c:0,t:0});
+  const [sepModal,setSepModal]=useState(false);
+  const [saveBeforeExportModal,setSaveBeforeExportModal]=useState(false);
+  const [tab,setTab]=useState('I');
+  const [xf,setXf]=useState(DEFAULT_XF);
+  const [invF,setInvF]=useState(DEFAULT_INV);
+  const [savedMsg,setSavedMsg]=useState(false);
+  const [page,setPage]=useState('home');
+  const [tipoSubida,setTipoSubida]=useState('ambas');
+  const [lastUploadInfo,setLastUploadInfo]=useState(null);
+  const [hasSavedConfig,setHasSavedConfig]=useState(false);
+  const [visColsOpen,setVisColsOpen]=useState(false);
+  const [hidColsOpen,setHidColsOpen]=useState(false);
+  const [user,setUser]=useState(null);
+  const [uuidDupes,setUuidDupes]=useState(new Set());
+  const [savedContribs,setSavedContribs]=useState(()=>{try{return JSON.parse(localStorage.getItem(CONTRIB_KEY)||'{}');}catch{return{};}});
+  const [expandedContrib,setExpandedContrib]=useState(null);
+  const [selectedSidebarItem,setSelectedSidebarItem]=useState(null);
+  const [closedGroups,setClosedGroups]=useState(new Set());
+  const [sbOpenFolders,setSbOpenFolders]=useState(new Set());
+  const [sbFolderNames,setSbFolderNames]=useState({});
+  const [sbEditingFolder,setSbEditingFolder]=useState(null);
+  const sbEditRef=useRef(null);
+  const [secUpload,setSecUpload]=useState(true);
+  const [secContrib,setSecContrib]=useState(false);
+  const [secDespacho,setSecDespacho]=useState(false);
+  const [contribView,setContribView]=useState(null);
+  const [confirmDel,setConfirmDel]=useState(null);
+  const [excludedFiles,setExcludedFiles]=useState(()=>new Set());
+  const dropRef=useRef(null),fileRef=useRef(null),folderRef=useRef(null),filesRef=useRef([]);
+  useEffect(()=>{filesRef.current=files;},[files]);
+
+  useEffect(()=>{
+    if(!sb){return;}
+    sb.auth.getSession().then(({data:{session}})=>setUser(session?.user??null));
+    const {data:{subscription}}=sb.auth.onAuthStateChange((_e,session)=>{
+      setUser(session?.user??null);
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  const handleSignOut=useCallback(async()=>{
+    if(sb)await sb.auth.signOut();
+    setUser(null);
+  },[]);
+
+  useEffect(()=>{
+    try{const s=localStorage.getItem(CFG_KEY);if(s){setXf(p=>({...DEFAULT_XF,...JSON.parse(s)}));setHasSavedConfig(true);}}catch{}
+    const no=e=>e.preventDefault();
+    document.addEventListener('dragover',no);document.addEventListener('drop',no);
+    return()=>{document.removeEventListener('dragover',no);document.removeEventListener('drop',no);};
+  },[]);
+
+  useEffect(()=>{
+    const zone=dropRef.current;if(!zone)return;
+    const onEnter=e=>{e.preventDefault();e.stopPropagation();setDrag(true);};
+    const onOver =e=>{e.preventDefault();e.stopPropagation();};
+    const onLeave=e=>{if(!zone.contains(e.relatedTarget))setDrag(false);};
+    const onDrop =async e=>{
+      e.preventDefault();e.stopPropagation();setDrag(false);
+      {const _di=[...e.dataTransfer.items||[]];const _df=[...e.dataTransfer.files||[]];if(_di.length&&typeof _di[0].webkitGetAsEntry==='function'){const _en=_di[0].webkitGetAsEntry?.();if(_en?.isDirectory)setLastUploadInfo({type:'folder',name:_en.name});else{const _f=_di[0].getAsFile?.();if(_f)setLastUploadInfo({type:isZip(_f)?'zip':'xml',name:_f.name});}}else if(_df.length){const _f=_df[0];setLastUploadInfo({type:isZip(_f)?'zip':'xml',name:_f.name});}}
+      const tagged=[],skip=[];
+      try{
+        const items=[...e.dataTransfer.items||[]];
+        if(items.length&&typeof items[0].webkitGetAsEntry==='function'){
+          const entries=items.map(it=>it.webkitGetAsEntry()).filter(Boolean);
+          for(const en of entries){
+            const carpeta=en.isDirectory?en.name:null;
+            const fs=await readEntry(en);
+            for(const f of fs){
+              if(f.name.toLowerCase().endsWith('.xml')){tagged.push({file:f,carpeta});}
+              else if(isZip(f)){const r=await extractZip(f);tagged.push(...r.xmls.map(x=>({file:x,carpeta:carpeta||f.name})));skip.push(...r.skip);}
+              else skip.push({name:f.name,source:carpeta||'suelto'});
+            }
+          }
+        }else{
+          for(const f of [...e.dataTransfer.files||[]]){
+            if(f.name.toLowerCase().endsWith('.xml')){tagged.push({file:f,carpeta:null});}
+            else if(isZip(f)){const r=await extractZip(f);tagged.push(...r.xmls.map(x=>({file:x,carpeta:f.name})));skip.push(...r.skip);}
+            else skip.push({name:f.name,source:'suelto'});
+          }
+        }
+      }catch{[...e.dataTransfer.files||[]].forEach(f=>{if(f.name.toLowerCase().endsWith('.xml'))tagged.push({file:f,carpeta:null});});}
+      addTaggedFiles(tagged,skip);
+    };
+    zone.addEventListener('dragenter',onEnter);zone.addEventListener('dragover',onOver);
+    zone.addEventListener('dragleave',onLeave);zone.addEventListener('drop',onDrop);
+    return()=>{zone.removeEventListener('dragenter',onEnter);zone.removeEventListener('dragover',onOver);zone.removeEventListener('dragleave',onLeave);zone.removeEventListener('drop',onDrop);};
+  },[page]);
+
+
+  const upXf=p=>setXf(x=>({...x,...p}));
+
+  /* ── Auto-selección contribuyente más repetido ── */
+  useEffect(()=>{
+    if(xf.miRfc||results.length===0)return;
+    const SKIP=new Set(['XAXX010101000','XEXX010101000','']);
+    const cnt=new Map();
+    results.filter(r=>r.data?.ok).forEach(r=>{
+      const c=r.data.comp;
+      if(c.rfcEm&&!SKIP.has(c.rfcEm))cnt.set(c.rfcEm,(cnt.get(c.rfcEm)||0)+1);
+      if(c.rfcRe&&!SKIP.has(c.rfcRe))cnt.set(c.rfcRe,(cnt.get(c.rfcRe)||0)+1);
+    });
+    if(!cnt.size)return;
+    const best=[...cnt.entries()].sort((a,b)=>b[1]-a[1])[0][0];
+    if(best)upXf({miRfc:best});
+  },[results]);
+  const upInv=p=>setInvF(x=>({...x,...p}));
+  const saveConfig=()=>{localStorage.setItem(CFG_KEY,JSON.stringify(xf));setHasSavedConfig(true);setSavedMsg(true);setTimeout(()=>setSavedMsg(false),2000);};
+
+  const allRows=useMemo(()=>toRows(results,xf.miRfc),[results,xf.miRfc]);
+  const filteredRows=useMemo(()=>{
+    let rows=xf.tipoFiltro==='todos'?allRows:allRows.filter(r=>r._tipo===xf.tipoFiltro);
+    if(selectedFileNames)rows=rows.filter(r=>selectedFileNames.has(r.archivo));
+    return rows;
+  },[allRows,xf.tipoFiltro,selectedFileNames]);
+
+  /* Mapa uuid → _tipo para facturas individuales */
+  const tipoMap=useMemo(()=>{const m=new Map();allRows.forEach(r=>m.set(r._uuid,r._tipo));return m;},[allRows]);
+
+  const okCount=results.filter(r=>r.data?.ok).length;
+  const errCount=results.length-okCount;
+  const pending=files.filter(f=>f.status==='pending'&&!excludedFiles.has(f.id));
+  const isActive=busy||files.some(f=>f.status==='processing');
+
+  const totalIngs=useMemo(()=>{const seen=new Set();return allRows.filter(r=>r._tipo==='I'&&!seen.has(r._uuid)&&(seen.add(r._uuid),true)).reduce((s,r)=>s+r.total,0);},[allRows]);
+  const totalEgs=useMemo(()=>{const seen=new Set();return allRows.filter(r=>r._tipo==='E'&&!seen.has(r._uuid)&&(seen.add(r._uuid),true)).reduce((s,r)=>s+r.total,0);},[allRows]);
+
+  /* Contribuyentes únicos de los XML procesados (emisores y receptores) */
+  const allContribs=useMemo(()=>{
+    const m=new Map();
+    results.filter(r=>r.data?.ok).forEach(r=>{
+      const c=r.data.comp;
+      if(c.rfcEm)m.set(c.rfcEm,{rfc:c.rfcEm,nom:c.nomEm||c.rfcEm});
+      if(c.rfcRe)m.set(c.rfcRe,{rfc:c.rfcRe,nom:c.nomRe||c.rfcRe});
+    });
+    return[...m.values()].sort((a,b)=>a.nom.localeCompare(b.nom));
+  },[results]);
+
+  const mostFreqContrib=useMemo(()=>{
+    if(!results.some(r=>r.data?.ok))return null;
+    const SKIP=new Set(['XAXX010101000','XEXX010101000','']);
+    const cnt=new Map();
+    results.filter(r=>r.data?.ok).forEach(r=>{
+      const c=r.data.comp;
+      if(c.rfcEm&&!SKIP.has(c.rfcEm))cnt.set(c.rfcEm,(cnt.get(c.rfcEm)||0)+1);
+      if(c.rfcRe&&!SKIP.has(c.rfcRe))cnt.set(c.rfcRe,(cnt.get(c.rfcRe)||0)+1);
+    });
+    if(!cnt.size)return null;
+    const bestRfc=[...cnt.entries()].sort((a,b)=>b[1]-a[1])[0][0];
+    return allContribs.find(x=>x.rfc===bestRfc)||null;
+  },[results,allContribs]);
+
+  const sbFolderGroups=useMemo(()=>{
+    const groups=new Map();
+    files.forEach(function(f){const k=f.carpeta||null;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(f);});
+    return [...groups.entries()].filter(function(e){return e[0]!==null;});
+  },[files]);
+
+  const selectedFileNames=useMemo(()=>{
+    if(!selectedSidebarItem)return null;
+    const s=new Set();
+    if(selectedSidebarItem.type==='file'){s.add(selectedSidebarItem.name);}
+    else if(selectedSidebarItem.type==='folder'){
+      files.filter(f=>f.carpeta===selectedSidebarItem.key).forEach(f=>s.add(f.name));
+    }
+    return s;
+  },[selectedSidebarItem,files]);
+
+  const currentTabKey=useMemo(()=>
+    (xf.separar&&xf.sepModo==='dos-hojas')?tab:null
+  ,[xf.separar,xf.sepModo,tab]);
+
+  const rowsForTab=useMemo(()=>{
+    if(!currentTabKey)return filteredRows;
+    return filteredRows.filter(r=>r._tipo===currentTabKey);
+  },[filteredRows,currentTabKey]);
+
+  const visCols=useMemo(()=>{
+    const hidTab=currentTabKey==='I'?(xf.colsOcultadasI||[]):currentTabKey==='E'?(xf.colsOcultadasE||[]):[];
+    const hidSet=new Set([...xf.colsOcultadas,...hidTab]);
+    let cols=COL_DEFS.filter(c=>{
+      if(hidSet.has(c.key))return false;
+      if(!c.removable)return true;
+      if(xf.restauradas.includes(c.key))return true;
+      if(!xf.eliminarCeros)return true;
+      if(c.numeric)return rowsForTab.some(r=>(r[c.key]||0)!==0);
+      return rowsForTab.some(r=>(r[c.key]||'')!=='');
+    });
+    const orderKey=currentTabKey==='I'?'colOrderI':currentTabKey==='E'?'colOrderE':'colOrder';
+    const order=xf[orderKey];
+    if(order&&order.length){
+      const idxMap=new Map(order.map((k,i)=>[k,i]));
+      cols=[...cols].sort((a,b)=>(idxMap.get(a.key)??9999)-(idxMap.get(b.key)??9999));
+    }
+    return cols;
+  },[rowsForTab,xf,currentTabKey]);
+
+  const moveColOrder=(key,dir)=>{
+    const orderKey=currentTabKey==='I'?'colOrderI':currentTabKey==='E'?'colOrderE':'colOrder';
+    const base=(xf[orderKey]&&xf[orderKey].length)?xf[orderKey]:visCols.map(c=>c.key);
+    const idx=base.indexOf(key);
+    if(idx===-1||idx+dir<0||idx+dir>=base.length)return;
+    const a=[...base];[a[idx],a[idx+dir]]=[a[idx+dir],a[idx]];
+    upXf({[orderKey]:a});
+  };
+
+  const hiddenCols=useMemo(()=>{
+    const hidTab=currentTabKey==='I'?(xf.colsOcultadasI||[]):currentTabKey==='E'?(xf.colsOcultadasE||[]):[];
+    return COL_DEFS.filter(c=>
+      c.removable&&xf.eliminarCeros&&!xf.restauradas.includes(c.key)&&
+      !xf.colsOcultadas.includes(c.key)&&!hidTab.includes(c.key)&&
+      (c.numeric?!rowsForTab.some(r=>(r[c.key]||0)!==0):!rowsForTab.some(r=>(r[c.key]||'')!==''))
+    );
+  },[rowsForTab,xf,currentTabKey]);
+
+  /* ── Filtros facturas individuales ── */
+  const invMeses=useMemo(()=>[...new Set(results.filter(r=>r.data?.ok).map(r=>monthKey(r.data.comp.fecha)))].sort(),[results]);
+  const invContribs=useMemo(()=>{
+    const m=new Map();
+    results.filter(r=>r.data?.ok).forEach(r=>{
+      const c=r.data.comp;
+      if(c.rfcEm)m.set(c.rfcEm,c.nomEm||c.rfcEm);
+      if(c.rfcRe)m.set(c.rfcRe,c.nomRe||c.rfcRe);
+    });
+    return[...m.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+  },[results]);
+
+  const filteredResults=useMemo(()=>{
+    let ok=results.filter(r=>r.data?.ok);
+    if(selectedFileNames)ok=ok.filter(r=>selectedFileNames.has(r.name));
+    const tipo=invF.tipo;
+    if(tipo!=='todos')ok=ok.filter(r=>tipoMap.get(r.data.comp.uuid)===tipo);
+    if(invF.mes!=='todos')ok=ok.filter(r=>monthKey(r.data.comp.fecha)===invF.mes);
+    if(invF.contribuyente!=='todos')ok=ok.filter(r=>r.data.comp.rfcEm===invF.contribuyente||r.data.comp.rfcRe===invF.contribuyente);
+    if(invF.orden==='fecha-asc')ok.sort((a,b)=>a.data.comp.fecha.localeCompare(b.data.comp.fecha));
+    else if(invF.orden==='fecha-desc')ok.sort((a,b)=>b.data.comp.fecha.localeCompare(a.data.comp.fecha));
+    else if(invF.orden==='total-desc')ok.sort((a,b)=>(b.data.fiscal?.total||0)-(a.data.fiscal?.total||0));
+    else if(invF.orden==='total-asc')ok.sort((a,b)=>(a.data.fiscal?.total||0)-(b.data.fiscal?.total||0));
+    else if(invF.orden==='emisor')ok.sort((a,b)=>(a.data.comp.nomEm||'').localeCompare(b.data.comp.nomEm||''));
+    const err=results.filter(r=>!r.data?.ok);
+    if(selectedFileNames)return[...ok,...err.filter(r=>selectedFileNames.has(r.name))];
+    return[...ok,...err];
+  },[results,invF,tipoMap,selectedFileNames]);
+
+  const invFiltrosActivos=invF.tipo!=='todos'||invF.mes!=='todos'||invF.contribuyente!=='todos'||invF.orden!=='default';
+
+  const addTaggedFiles=(tagged,skip=[])=>{
+    if(skip.length)setSkipped(p=>[...p,...skip]);
+    if(!tagged.length)return;
+    const existing=new Set(filesRef.current.map(f=>f.name));
+    const dn=tagged.filter(({file:f})=>existing.has(f.name)).map(({file:f})=>f.name);
+    if(dn.length)setDupes(d=>[...new Set([...d,...dn])]);
+    const nx=tagged.filter(({file:f})=>!existing.has(f.name));
+    if(nx.length)setFiles(p=>[...p,...nx.map(({file:f,carpeta:c})=>({id:uid(),file:f,name:f.name,status:'pending',carpeta:c||null}))]);
+  };
+  const onFileInput=async e=>{
+    const all=[...e.target.files];e.target.value='';
+    if(all.length>0){const f=all[0];setLastUploadInfo({type:isZip(f)?'zip':'xml',name:all.length===1?f.name:`${all.length} archivos XML`});}
+    const tagged=[];const skip=[];
+    for(const f of all){
+      if(f.name.toLowerCase().endsWith('.xml')){tagged.push({file:f,carpeta:null});}
+      else if(isZip(f)){const r=await extractZip(f);tagged.push(...r.xmls.map(x=>({file:x,carpeta:f.name})));skip.push(...r.skip);}
+      else skip.push({name:f.name,source:'sel.'});
+    }
+    addTaggedFiles(tagged,skip);
+  };
+  const onFolderInput=async e=>{
+    const all=[...e.target.files];e.target.value='';
+    if(all.length>0){const parts=all[0].webkitRelativePath?.split('/')||[];setLastUploadInfo({type:'folder',name:parts.length>1?parts[0]:all[0].name||'Carpeta'});}
+    const tagged=[];const skip=[];
+    for(const f of all){
+      const parts=f.webkitRelativePath?.split('/')||[];
+      const carpeta=parts.length>2?parts[1]:parts.length>1?parts[0]:null;
+      if(f.name.toLowerCase().endsWith('.xml')){tagged.push({file:f,carpeta});}
+      else if(isZip(f)){const r=await extractZip(f);tagged.push(...r.xmls.map(x=>({file:x,carpeta})));skip.push(...r.skip);}
+      else skip.push({name:f.name,source:'carpeta'});
+    }
+    addTaggedFiles(tagged,skip);
+  };
+
+  const process=async()=>{
+    if(!pending.length||isActive)return;
+    setBusy(true);setProg({c:0,t:pending.length});
+    const nr=[];
+    const tf=tipoSubida!=='ambas'?tipoSubida:null;
+    for(let i=0;i<pending.length;i++){
+      const fe=pending[i];
+      setFiles(p=>p.map(f=>f.id===fe.id?{...f,status:'processing'}:f));
+      setProg({c:i+1,t:pending.length});
+      try{const txt=await fe.file.text();const d=parseCFDI(txt);nr.push({name:fe.name,data:d,tipoForzado:tf});setFiles(p=>p.map(f=>f.id===fe.id?{...f,status:d.ok?'success':'error'}:f));}
+      catch(err){nr.push({name:fe.name,data:{ok:false,err:[err.message],adv:[],comp:{},fiscal:{},concs:[]},tipoForzado:tf});setFiles(p=>p.map(f=>f.id===fe.id?{...f,status:'error'}:f));}
+    }
+    setResults(prev=>{
+      const existingUuids=new Set(prev.filter(r=>r.data.ok).map(r=>r.data.comp?.uuid).filter(Boolean));
+      const seenInBatch=new Set();
+      const dupeUuids=new Set();
+      const dedupedNr=nr.filter(r=>{
+        if(!r.data.ok)return true;
+        const uuid=r.data.comp?.uuid;
+        if(!uuid)return true;
+        if(existingUuids.has(uuid)||seenInBatch.has(uuid)){dupeUuids.add(uuid);return false;}
+        seenInBatch.add(uuid);
+        return true;
+      });
+      if(dupeUuids.size>0)setUuidDupes(d=>new Set([...d,...dupeUuids]));
+      return[...prev,...dedupedNr];
+    });
+    setBusy(false);
+  };
+
+  useEffect(()=>{if(pending.length>0&&!isActive)process();},[pending.length,isActive]);
+
+  const removeUuidDupes=()=>{
+    const seen=new Set();
+    setResults(p=>p.filter(r=>{
+      if(!r.data.ok)return true;
+      const uuid=r.data.comp?.uuid;
+      if(!uuid){return true;}
+      if(seen.has(uuid))return false;
+      seen.add(uuid);return true;
+    }));
+    setUuidDupes(new Set());
+  };
+
+  const guardarContrib=()=>{
+    if(!xf.miRfc)return;
+    const fromXml=allContribs.find(x=>x.rfc===xf.miRfc);
+    const fromSaved=savedContribs[xf.miRfc];
+    const nombre=fromXml?.nom||fromSaved?.nombre||xf.miRfc;
+    const fileMap=new Map(files.map(f=>[f.name,f.carpeta]));
+    const carpetasMap={};
+    results.filter(r=>r.data.ok).forEach(r=>{
+      const cp=fileMap.get(r.name)||'Sin carpeta';
+      if(!carpetasMap[cp])carpetasMap[cp]=[];
+      carpetasMap[cp].push({nombre:r.name,uuid:r.data.comp?.uuid||'',fecha:r.data.comp?.fecha||'',total:r.data.fiscal?.total||0});
+    });
+    const saved={rfc:xf.miRfc,nombre,carpetas:Object.entries(carpetasMap).map(([nombre,xmls])=>({nombre,xmls})),guardadoEn:new Date().toISOString()};
+    const updated={...savedContribs,[xf.miRfc]:saved};
+    localStorage.setItem(CONTRIB_KEY,JSON.stringify(updated));
+    setSavedContribs(updated);
+    setExpandedContrib(xf.miRfc);
+    setSecContrib(true);
+    setSavedMsg(true);setTimeout(()=>setSavedMsg(false),2500);
+  };
+
+  const updateEfirma=(rfc,fecha)=>{
+    const updated={...savedContribs,[rfc]:{...savedContribs[rfc],efirmaVencimiento:fecha}};
+    localStorage.setItem(CONTRIB_KEY,JSON.stringify(updated));
+    setSavedContribs(updated);
+  };
+
+  const doDelete=useCallback(()=>{
+    if(!confirmDel)return;
+    if(confirmDel.type==='folder'){
+      const cp=confirmDel.carpeta;
+      setFiles(p=>p.filter(f=>f.carpeta!==cp));
+      setSbFolderNames(prev=>{const n={...prev};delete n[cp];return n;});
+      setSbOpenFolders(s=>{const n=new Set(s);n.delete(cp);return n;});
+    }else if(confirmDel.type==='file'){
+      setFiles(p=>p.filter(f=>f.id!==confirmDel.fileId));
+    }
+    setConfirmDel(null);
+  },[confirmDel]);
+
+  /* ─── Export helpers ─── */
+  const getExportName=()=>{
+    const contrib=xf.miRfc?allContribs.find(x=>x.rfc===xf.miRfc):null;
+    const safe=contrib?contrib.nom.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9\s]/g,'').trim().replace(/\s+/g,'_').slice(0,40):'reporte-sat';
+    const dates=filteredRows.map(r=>r.fecha).filter(Boolean).sort();
+    const desde=dates.length?dates[0].slice(0,10):new Date().toISOString().slice(0,10);
+    const hasta=dates.length?dates[dates.length-1].slice(0,10):desde;
+    return`${safe}_${desde}_${hasta}`;
+  };
+
+  const XL_S={
+    hdr: {fill:{fgColor:{rgb:'E2EFDA'}},font:{bold:true,color:{rgb:'1F3D0C'},sz:10},border:{bottom:{style:'thin',color:{rgb:'2F75B6'}}}},
+    hdrN:{fill:{fgColor:{rgb:'E2EFDA'}},font:{bold:true,color:{rgb:'1F3D0C'},sz:10},border:{bottom:{style:'thin',color:{rgb:'2F75B6'}}},alignment:{horizontal:'right'}},
+    hdrR:{fill:{fgColor:{rgb:'E2EFDA'}},font:{bold:true,color:{rgb:'1F3D0C'},sz:10},border:{bottom:{style:'thin',color:{rgb:'2F75B6'}}},alignment:{horizontal:'center'}},
+    mhdr:{fill:{fgColor:{rgb:'BDD7EE'}},font:{bold:true,color:{rgb:'1F3864'},sz:9},border:{top:{style:'medium',color:{rgb:'2F75B6'}}}},
+    secI:{fill:{fgColor:{rgb:'E2EFDA'}},font:{bold:true,color:{rgb:'14532D'},sz:10}},
+    secE:{fill:{fgColor:{rgb:'FCE4D6'}},font:{bold:true,color:{rgb:'7C2D12'},sz:10}},
+    mtot:{fill:{fgColor:{rgb:'FFF2CC'}},font:{bold:true,sz:10},border:{top:{style:'thin',color:{rgb:'000000'}}}},
+    mtotN:{fill:{fgColor:{rgb:'FFF2CC'}},font:{bold:true,sz:10},border:{top:{style:'thin',color:{rgb:'000000'}}},alignment:{horizontal:'right'}},
+    gtot:{fill:{fgColor:{rgb:'FCE4D6'}},font:{bold:true,sz:10},border:{top:{style:'medium',color:{rgb:'000000'}}}},
+    gtotN:{fill:{fgColor:{rgb:'FCE4D6'}},font:{bold:true,sz:10},border:{top:{style:'medium',color:{rgb:'000000'}}},alignment:{horizontal:'right'}},
+    even:{fill:{fgColor:{rgb:'FFFFFF'}},font:{sz:10}},
+    evenN:{fill:{fgColor:{rgb:'FFFFFF'}},font:{sz:10},alignment:{horizontal:'right'}},
+    odd:{fill:{fgColor:{rgb:'F7F7F7'}},font:{sz:10}},
+    oddN:{fill:{fgColor:{rgb:'F7F7F7'}},font:{sz:10},alignment:{horizontal:'right'}},
+    rn:{fill:{fgColor:{rgb:'F2F2F2'}},font:{color:{rgb:'777777'},sz:9},alignment:{horizontal:'center'}},
+  };
+
+  const applyXlStyles=(ws,rowMeta)=>{
+    const nc=visCols.length;
+    const firstSumIdx=visCols.findIndex(c=>c.numeric&&!c.noSum);
+    const merges=[];
+    rowMeta.forEach((type,ri)=>{
+      for(let ci=0;ci<nc;ci++){
+        const addr=XLSX.utils.encode_cell({r:ri,c:ci});
+        if(!ws[addr])ws[addr]={v:'',t:'s'};
+        const isN=visCols[ci]?.numeric;
+        if(type==='hdr')ws[addr].s=isN?XL_S.hdrN:XL_S.hdr;
+        else if(type==='mhdr')ws[addr].s=XL_S.mhdr;
+        else if(type==='secI')ws[addr].s=XL_S.secI;
+        else if(type==='secE')ws[addr].s=XL_S.secE;
+        else if(type==='mtot')ws[addr].s=isN?XL_S.mtotN:XL_S.mtot;
+        else if(type==='gtot')ws[addr].s=isN?XL_S.gtotN:XL_S.gtot;
+        else if(type==='even')ws[addr].s=isN?XL_S.evenN:XL_S.even;
+        else if(type==='odd')ws[addr].s=isN?XL_S.oddN:XL_S.odd;
+      }
+      if(type==='mhdr'||type==='secI'||type==='secE'){
+        if(nc>1)merges.push({s:{r:ri,c:0},e:{r:ri,c:nc-1}});
+      }else if(type==='mtot'||type==='gtot'){
+        if(nc>1)merges.push({s:{r:ri,c:0},e:{r:ri,c:1}});
+      }
+    });
+    if(merges.length)ws['!merges']=merges;
+    ws['!cols']=visCols.map(c=>({wch:Math.max(c.label.length+2,c.numeric?14:c.key==='descripcion'||c.key==='nom_em'||c.key==='nom_re'?32:c.key==='uuid'?38:18)}));
+  };
+
+  const buildStyledSheet=(rows,wm)=>{
+    const aoa=[],meta=[];
+    const fv=(c,v)=>c.numeric?(v||0):(c.key==='fecha'||c.key==='fecha_tim'?v?.slice(0,10)||'':v||'');
+    const hdrRow=()=>{aoa.push(visCols.map(c=>c.label));meta.push('hdr');};
+    const addR=(r,t)=>{aoa.push(visCols.map(c=>fv(c,r[c.key])));meta.push(t);};
+    const addT=(rs,lbl,t)=>{const s=sumN(rs,visCols.filter(c=>c.numeric));aoa.push(visCols.map(c=>{if(!c.numeric)return c===visCols[0]?lbl:'';if(c.noSum)return'';return s[c.key]||0;}));meta.push(t);};
+    const blank=()=>{aoa.push(Array(visCols.length).fill(''));meta.push('blank');};
+    hdrRow();
+    if(wm){
+      const map=new Map();rows.forEach(r=>{const k=monthKey(r.fecha);if(!map.has(k))map.set(k,[]);map.get(k).push(r);});
+      const sorted=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+      sorted.forEach(([k,mr])=>{
+        aoa.push([monthLabel(k).toUpperCase(),...Array(visCols.length-1).fill('')]);meta.push('mhdr');
+        hdrRow();
+        mr.forEach((r,i)=>addR(r,i%2===0?'even':'odd'));
+        addT(mr,`Total ${monthLabel(k)}`,'mtot');blank();blank();
+      });
+      if(sorted.length>1)addT(rows,'TOTAL GENERAL','gtot');
+    }else{
+      rows.forEach((r,i)=>addR(r,i%2===0?'even':'odd'));
+      addT(rows,'TOTAL GENERAL','gtot');
+    }
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    applyXlStyles(ws,meta);
+    return ws;
+  };
+
+  const buildMismaSheet=(sr,wm)=>{
+    const aoa=[],meta=[];
+    const fv=(c,v)=>c.numeric?(v||0):(c.key==='fecha'||c.key==='fecha_tim'?v?.slice(0,10)||'':v||'');
+    const hdrRow=()=>{aoa.push(visCols.map(c=>c.label));meta.push('hdr');};
+    const addT=(rs,lbl,t)=>{const s=sumN(rs,visCols.filter(c=>c.numeric));aoa.push(visCols.map(c=>{if(!c.numeric)return c===visCols[0]?lbl:'';if(c.noSum)return'';return s[c.key]||0;}));meta.push(t);};
+    const addSection=(rows,secLabel,stype)=>{
+      if(!rows.length)return;
+      aoa.push([secLabel,...Array(visCols.length-1).fill('')]);meta.push(stype);
+      hdrRow();
+      rows.forEach((r,i)=>{aoa.push(visCols.map(c=>fv(c,r[c.key])));meta.push(i%2===0?'even':'odd');});
+      addT(rows,'TOTAL','gtot');
+      aoa.push(Array(visCols.length).fill(''));meta.push('blank');
+      aoa.push(Array(visCols.length).fill(''));meta.push('blank');
+    };
+    hdrRow();
+    addSection(sr.filter(r=>r._tipo==='I'),'▶ INGRESOS','secI');
+    addSection(sr.filter(r=>r._tipo==='E'),'▶ GASTOS / EGRESOS','secE');
+    const rest=sr.filter(r=>!['I','E'].includes(r._tipo));
+    if(rest.length)rest.forEach((r,i)=>{aoa.push(visCols.map(c=>fv(c,r[c.key])));meta.push(i%2===0?'even':'odd');});
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    applyXlStyles(ws,meta);
+    return ws;
+  };
+
+  /* ─── Excel export ─── */
+  const addYearSheets=(wb,rows,prefix)=>{
+    const yrMap=new Map();
+    rows.forEach(r=>{const yr=r.fecha?r.fecha.slice(0,4):'????';if(!yrMap.has(yr))yrMap.set(yr,[]);yrMap.get(yr).push(r);});
+    [...yrMap.entries()].sort((a,b)=>a[0].localeCompare(b[0])).forEach(([yr,yrows])=>{
+      const name=`${prefix} ${yr}`.slice(0,31);
+      XLSX.utils.book_append_sheet(wb,buildStyledSheet(yrows,true),name);
+    });
+  };
+  const exportExcel=()=>{
+    const fn=getExportName();
+    let sr=[...filteredRows];
+    if(xf.ordenFecha==='asc')sr.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    if(xf.ordenFecha==='desc')sr.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    const wm=xf.sumasMensuales;
+    if(xf.sepPorAno){
+      const wb=XLSX.utils.book_new();
+      const yrsSet=new Set(sr.map(r=>r.fecha?r.fecha.slice(0,4):'????'));
+      const yrs=[...yrsSet].sort();
+      yrs.forEach(yr=>{
+        const byYr=sr.filter(r=>(r.fecha?r.fecha.slice(0,4):'????')===yr);
+        const ing=byYr.filter(r=>r._tipo==='I');
+        const egr=byYr.filter(r=>r._tipo==='E');
+        if(ing.length){const nm=`INGRESOS ${yr}`.slice(0,31);XLSX.utils.book_append_sheet(wb,buildStyledSheet(ing,wm),nm);}
+        if(egr.length){const nm=`GASTOS ${yr}`.slice(0,31);XLSX.utils.book_append_sheet(wb,buildStyledSheet(egr,wm),nm);}
+      });
+      XLSX.writeFile(wb,`${fn}.xlsx`);
+      return;
+    }
+    if(xf.separar&&xf.sepModo==='dos-archivos'){
+      [['Ingresos',sr.filter(r=>r._tipo==='I')],['Gastos',sr.filter(r=>r._tipo==='E')]].forEach(([n,rows])=>{
+        const wb=XLSX.utils.book_new();
+        if(wm)addYearSheets(wb,rows,n);
+        else XLSX.utils.book_append_sheet(wb,buildStyledSheet(rows,false),n);
+        XLSX.writeFile(wb,`${fn}_${n.toLowerCase()}.xlsx`);
+      });
+      return;
+    }
+    const wb=XLSX.utils.book_new();
+    if(xf.separar&&xf.sepModo==='dos-hojas'){
+      if(wm){addYearSheets(wb,sr.filter(r=>r._tipo==='I'),'Ingresos');addYearSheets(wb,sr.filter(r=>r._tipo==='E'),'Gastos');}
+      else{XLSX.utils.book_append_sheet(wb,buildStyledSheet(sr.filter(r=>r._tipo==='I'),false),'Ingresos');XLSX.utils.book_append_sheet(wb,buildStyledSheet(sr.filter(r=>r._tipo==='E'),false),'Gastos');}
+    }else if(xf.separar&&xf.sepModo==='misma'){
+      XLSX.utils.book_append_sheet(wb,buildMismaSheet(sr,wm),'Reporte SAT');
+    }else{
+      if(wm)addYearSheets(wb,sr,'Año');
+      else XLSX.utils.book_append_sheet(wb,buildStyledSheet(sr,false),'Reporte SAT');
+    }
+    XLSX.writeFile(wb,`${fn}.xlsx`);
+  };
+
+  /* ─── PDF export ─── */
+  const exportPDF=()=>{
+    const {jsPDF}=window.jspdf;
+    const dt=new Date().toISOString().slice(0,10);
+    let sr=[...filteredRows];
+    if(xf.ordenFecha==='asc')sr.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    if(xf.ordenFecha==='desc')sr.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    const buildPDFData=(rows)=>{
+      const headers=['#',...visCols.map(c=>c.label)];
+      const body=rows.map((r,i)=>[i+1,...visCols.map(c=>{
+        if(c.numeric)return c.currency===false?numFmt(r[c.key]||0):peso(r[c.key]||0);
+        if(c.key==='fecha'||c.key==='fecha_tim')return r[c.key]?.slice(0,10)||'';
+        if(c.key==='tipo_cfdi')return tipoLabel(r[c.key]);
+        if(c.key==='uuid')return r[c.key]?.slice(0,18)||'';
+        return r[c.key]||'';
+      })]);
+      const totals=sumN(rows,visCols.filter(c=>c.numeric));
+      body.push(['TOTAL',...visCols.map(c=>c.numeric?(c.currency===false?numFmt(totals[c.key]||0):peso(totals[c.key]||0)):'')]);
+      return{headers,body};
+    };
+    const makeDoc=()=>new jsPDF({orientation:'landscape',unit:'pt',format:'a3'});
+    const tableOpts=(headers,body,title)=>({
+      head:[headers],body,
+      styles:{fontSize:6,cellPadding:2,overflow:'ellipsize'},
+      headStyles:{fillColor:[31,40,46],textColor:255,fontStyle:'bold',fontSize:6.5},
+      alternateRowStyles:{fillColor:[247,247,247]},
+      didDrawPage:(d)=>{
+        const doc=d.doc;
+        doc.setFontSize(9);doc.setTextColor(80);
+        doc.text(`SAT CFDI Processor · ${title} · ${dt}`,14,20);
+        doc.text(`Página ${d.pageNumber}`,d.doc.internal.pageSize.width-50,20);
+      },
+      margin:{top:28},
+    });
+    if(xf.separar&&xf.sepModo==='dos-archivos'){
+      [['Ingresos',sr.filter(r=>r._tipo==='I')],['Gastos',sr.filter(r=>r._tipo==='E')]].forEach(([label,rows])=>{
+        const doc=makeDoc();const{headers,body}=buildPDFData(rows);
+        doc.autoTable(tableOpts(headers,body,label));doc.save(`${getExportName()}_${label.toLowerCase()}.pdf`);
+      });
+      return;
+    }
+    const doc=makeDoc();
+    if(xf.separar&&xf.sepModo==='dos-hojas'){
+      const ing=sr.filter(r=>r._tipo==='I');const egr=sr.filter(r=>r._tipo==='E');
+      if(ing.length){const{headers,body}=buildPDFData(ing);doc.autoTable({...tableOpts(headers,body,'Ingresos'),startY:28});}
+      if(egr.length){doc.addPage();const{headers,body}=buildPDFData(egr);doc.autoTable({...tableOpts(headers,body,'Gastos'),startY:28});}
+    }else if(xf.separar&&xf.sepModo==='misma'){
+      const ing=sr.filter(r=>r._tipo==='I');const egr=sr.filter(r=>r._tipo==='E');const rest=sr.filter(r=>!['I','E'].includes(r._tipo));
+      let y=28;
+      const addSection=(rows,label)=>{
+        if(!rows.length)return;
+        const{headers,body}=buildPDFData(rows);
+        doc.autoTable({...tableOpts(headers,body,label),startY:y});
+        y=doc.lastAutoTable.finalY+20;
+      };
+      addSection(ing,'Ingresos');addSection(egr,'Gastos');addSection(rest,'Otros');
+    }else{
+      const{headers,body}=buildPDFData(sr);
+      doc.autoTable(tableOpts(headers,body,'Reporte SAT'));
+    }
+    doc.save(`${getExportName()}.pdf`);
+  };
+
+  const clearAll=()=>{setFiles([]);setResults([]);setSkipped([]);setDupes([]);setInvF(DEFAULT_INV);setLastUploadInfo(null);setSelectedSidebarItem(null);};
+
+  /* ── Descarga automática ── */
+  const autoDisabled=!hasSavedConfig||filteredRows.length===0;
+  const autoTooltip=!hasSavedConfig?'Guarda primero una configuración (💾 Guardar config)':filteredRows.length===0?'Procesa archivos XML primero':'Exportar con la configuración guardada';
+  const autoExport=()=>{if(!autoDisabled){exportExcel();exportPDF();}};
+  const cycleOrden=()=>upXf({ordenFecha:xf.ordenFecha===null?'asc':xf.ordenFecha==='asc'?'desc':null});
+
+  const selStyle={padding:'5px 9px',borderRadius:5,border:'1px solid var(--b2)',background:'var(--card)',color:'var(--t1)',fontSize:11,cursor:'pointer'};
+
+  /* ══ RENDER ══ */
+  if(page==='home')return<HomePage onStart={()=>setPage('app')} user={user} onSignIn={setUser} onSignOut={handleSignOut}/>;
+  return(
+    <div style={{minHeight:'100vh',background:'var(--bg)'}}>
+
+      {/* HEADER */}
+      <header style={{background:'var(--card)',borderBottom:'1px solid var(--b1)',position:'sticky',top:0,zIndex:100,boxShadow:'0 1px 3px rgba(0,0,0,.06)'}}>
+        <div style={{maxWidth:1440,margin:'0 auto',padding:'0 18px',height:54,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <h1 className="sr-only">SAT CFDI Processor</h1>
+          <button onClick={()=>setPage('home')} style={{display:'flex',alignItems:'center',gap:10,background:'none',border:'none',cursor:'pointer',padding:0,fontFamily:'Inter,sans-serif'}}>
+            <div style={{width:32,height:32,background:'#1a1d23',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.2" fill="#fff" opacity=".85"/><rect x="9" y="1" width="6" height="6" rx="1.2" fill="#fff" opacity=".45"/><rect x="1" y="9" width="6" height="6" rx="1.2" fill="#fff" opacity=".45"/><rect x="9" y="9" width="6" height="6" rx="1.2" fill="#fff" opacity=".75"/></svg>
+            </div>
+            <div style={{textAlign:'left'}}>
+              <p style={{fontWeight:700,fontSize:13,margin:0,color:'var(--t1)'}}>SAT CFDI Processor</p>
+              <p style={{fontSize:10,color:'var(--t3)',margin:0}}>CFDI 3.3/4.0 · Local · Sin API</p>
+            </div>
+          </button>
+          <div style={{display:'flex',alignItems:'center',gap:7}}>
+            {results.length>0&&<button className="btn btn-sm" onClick={clearAll}>↺ Limpiar</button>}
+            {user&&(()=>{
+              const name=user.user_metadata?.full_name||user.user_metadata?.name||user.email?.split('@')[0]||'';
+              const av=user.user_metadata?.avatar_url;
+              return(
+                <div style={{display:'flex',alignItems:'center',gap:6,padding:'3px 8px 3px 4px',borderRadius:20,background:'var(--raised)',border:'1px solid var(--b1)'}}>
+                  {av?<img src={av} alt="" style={{width:22,height:22,borderRadius:'50%'}}/>:<div style={{width:22,height:22,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:10,fontWeight:700}}>{name[0]?.toUpperCase()}</div>}
+                  <span style={{fontSize:11,color:'var(--t2)',maxWidth:100,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{name}</span>
+                  <button onClick={handleSignOut} style={{fontSize:10,color:'var(--t3)',background:'none',border:'none',cursor:'pointer',padding:'0 2px',fontFamily:'Inter,sans-serif'}} title="Cerrar sesión">×</button>
+                </div>
+              );
+            })()}
+            <div style={{display:'flex',alignItems:'center',gap:5,padding:'4px 9px',borderRadius:5,background:'rgba(22,163,74,.08)',border:'1px solid rgba(22,163,74,.18)',fontSize:11,color:'var(--green)'}}>
+              <span className="pulse" style={{width:6,height:6,borderRadius:'50%',background:'var(--green)',display:'inline-block'}}/>Sin conexión
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* SIDEBAR IZQUIERDO */}
+      <nav className="sidebar-left" aria-label="Barra lateral">
+        <input id="sb-all" type="file" accept=".xml,.XML,.zip,.ZIP" multiple style={{display:'none'}} onChange={onFileInput}/>
+        <input id="sb-fld" type="file" webkitdirectory="" multiple style={{display:'none'}} onChange={onFolderInput}/>
+        <input id="sb-xml" type="file" accept=".xml,.XML" multiple style={{display:'none'}} onChange={onFileInput}/>
+        <input id="sb-zip" type="file" accept=".zip,.ZIP" style={{display:'none'}} onChange={onFileInput}/>
+
+        {/* Área desplazable */}
+        <div className="sb-scroll">
+          <div style={{padding:'10px 10px 14px'}}>
+
+                <div ref={dropRef} className={'sb-drop-zone'+(drag?' sb-dragover':'')} onClick={function(){document.getElementById('sb-all')&&document.getElementById('sb-all').click();}}>
+                  <svg className="sb-drop-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+                    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                  </svg>
+                  <div className="sb-drop-label">
+                    <strong>{drag?'Suelta aquí':'Arrastra tus archivos aquí'}</strong>
+                    {!drag&&'carpetas, archivos .zip o .xml'}
+                  </div>
+                  <div className="sb-drop-formats">XML · ZIP · Carpeta</div>
+                </div>
+
+                <div className="sb-file-btns">
+                  <button className="sb-file-btn" onClick={function(){document.getElementById('sb-fld')&&document.getElementById('sb-fld').click();}}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Carpeta
+                  </button>
+                  <button className="sb-file-btn" onClick={function(){document.getElementById('sb-zip')&&document.getElementById('sb-zip').click();}}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    .zip
+                  </button>
+                  <button className="sb-file-btn" onClick={function(){document.getElementById('sb-xml')&&document.getElementById('sb-xml').click();}}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                    </svg>
+                    .xml
+                  </button>
+                </div>
+
+                {mostFreqContrib&&(
+                  <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 4px 4px',borderTop:'1px solid var(--b1)',marginTop:10}}>
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{flexShrink:0}}>
+                      <circle cx="14" cy="10" r="5.5" fill="var(--green)" opacity=".15" stroke="var(--green)" strokeWidth="1.4"/>
+                      <path d="M4 26c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="var(--green)" strokeWidth="1.4" strokeLinecap="round" opacity=".6"/>
+                    </svg>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:700,color:'var(--t1)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{mostFreqContrib.nom}</div>
+                      <div style={{fontSize:10,fontFamily:'monospace',color:'var(--t3)',marginTop:1}}>{mostFreqContrib.rfc}</div>
+                    </div>
+                  </div>
+                )}
+
+                {sbFolderGroups.length>0&&(
+                  <div className="sb-file-tree">
+                    {sbFolderGroups.map(function(entry){
+                      var carpeta=entry[0];
+                      var fes=entry[1];
+                      var isOpen=sbOpenFolders.has(carpeta);
+                      var isZip=carpeta.toLowerCase().endsWith('.zip');
+                      var displayName=sbFolderNames[carpeta]||carpeta;
+                      var isRenamed=!!(sbFolderNames[carpeta]&&sbFolderNames[carpeta]!==carpeta);
+                      var isEditing=sbEditingFolder===carpeta;
+
+                      function saveName(){
+                        var trimmed=sbEditRef.current?sbEditRef.current.value.trim():'';
+                        setSbFolderNames(function(prev){var n=Object.assign({},prev);if(trimmed&&trimmed!==carpeta){n[carpeta]=trimmed;}else{delete n[carpeta];}return n;});
+                        setSbEditingFolder(null);
+                      }
+                      function startEdit(e){
+                        e.stopPropagation();
+                        setSbEditingFolder(carpeta);
+                      }
+                      function deleteFolder(e){
+                        e.stopPropagation();
+                        setConfirmDel({type:'folder',carpeta,displayName});
+                      }
+                      var anyProcessing=fes.some(function(fi){return fi.status==='processing';});
+
+                      return React.createElement('div',{key:carpeta,className:'sb-folder-group'+(isOpen?'':' sb-collapsed')},
+                        React.createElement('div',{className:'sb-tree-row sb-tree-folder'+(anyProcessing?' sb-tree-processing':''),
+                          onClick:function(){if(isEditing)return;setSbOpenFolders(function(s){var n=new Set(s);if(n.has(carpeta)){n.delete(carpeta);}else{n.add(carpeta);}return n;});}},
+                          React.createElement('span',{className:'sb-tree-icon '+(isZip?'sb-tree-icon-zip':'sb-tree-icon-folder')},
+                            isZip
+                              ? React.createElement('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:'2.3',strokeLinecap:'round',strokeLinejoin:'round'},
+                                  React.createElement('path',{d:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'}),
+                                  React.createElement('polyline',{points:'17 8 12 3 7 8'}),
+                                  React.createElement('line',{x1:'12',y1:'3',x2:'12',y2:'15'})
+                                )
+                              : React.createElement('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:'2.2',strokeLinecap:'round',strokeLinejoin:'round'},
+                                  React.createElement('path',{d:'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'})
+                                )
+                          ),
+                          isEditing
+                            ? React.createElement('input',{ref:sbEditRef,className:'sb-rename-input',defaultValue:displayName,autoFocus:true,
+                                onBlur:saveName,
+                                onKeyDown:function(e){if(e.key==='Enter'){e.preventDefault();saveName();}if(e.key==='Escape'){setSbEditingFolder(null);}},
+                                onClick:function(e){e.stopPropagation();}
+                              })
+                            : React.createElement('span',{className:'sb-tree-label',onDoubleClick:startEdit},displayName),
+                          !isEditing&&React.createElement('span',{className:'sb-rename-btn',title:'Renombrar',onClick:startEdit},
+                            React.createElement('svg',{width:12,height:12,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:'2.2',strokeLinecap:'round',strokeLinejoin:'round'},
+                              React.createElement('path',{d:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'}),
+                              React.createElement('path',{d:'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'})
+                            )
+                          ),
+                          !isEditing&&React.createElement('span',{className:'sb-delete-btn',title:'Eliminar carpeta',onClick:deleteFolder},
+                            React.createElement('svg',{width:12,height:12,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:'2.2',strokeLinecap:'round',strokeLinejoin:'round'},
+                              React.createElement('polyline',{points:'3 6 5 6 21 6'}),
+                              React.createElement('path',{d:'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'}),
+                              React.createElement('path',{d:'M10 11v6'}),
+                              React.createElement('path',{d:'M14 11v6'}),
+                              React.createElement('path',{d:'M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2'})
+                            )
+                          ),
+                          !isEditing&&React.createElement('span',{className:'sb-tree-toggle'},
+                            React.createElement('svg',{width:13,height:13,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:'2.5',strokeLinecap:'round',strokeLinejoin:'round'},
+                              React.createElement('polyline',{points:'6 9 12 15 18 9'})
+                            )
+                          )
+                        ),
+                        isRenamed&&React.createElement('div',{className:'sb-orig-name'},carpeta),
+                        React.createElement('div',{className:'sb-tree-children'},
+                          fes.map(function(f){
+                            var isExcluded=excludedFiles.has(f.id);
+                            var isProcessing=f.status==='processing';
+                            var isPending=f.status==='pending';
+                            var isDone=f.status==='success';
+                            var isError=f.status==='error';
+                            var clickable=isPending||isDone;
+                            function handleRowClick(e){
+                              e.stopPropagation();
+                              if(isDone){
+                                setResults(function(r){return r.filter(function(res){return res.name!==f.name;});});
+                                setFiles(function(fs){return fs.map(function(fi){return fi.id===f.id?Object.assign({},fi,{status:'pending'}):fi;});});
+                              } else if(isPending){
+                                setExcludedFiles(function(s){var n=new Set(s);if(n.has(f.id)){n.delete(f.id);}else{n.add(f.id);}return n;});
+                              }
+                            }
+                            return React.createElement('div',{
+                              key:f.id,
+                              className:'sb-tree-row sb-tree-xml'+(isProcessing?' sb-tree-processing':''),
+                              style:{paddingLeft:20,opacity:isExcluded?0.38:1,cursor:clickable?'pointer':'default'},
+                              title:isDone?'Clic para quitar del procesamiento':isPending?(isExcluded?'Clic para incluir':'Clic para excluir del procesamiento'):undefined,
+                              onClick:clickable?handleRowClick:undefined,
+                            },
+                              React.createElement('span',{className:'sb-tree-icon sb-tree-icon-xml',style:{color:isDone?'var(--green)':isError?'var(--red)':undefined}},
+                                React.createElement('svg',{width:12,height:12,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:'2.2',strokeLinecap:'round',strokeLinejoin:'round'},
+                                  React.createElement('polyline',{points:'16 18 22 12 16 6'}),
+                                  React.createElement('polyline',{points:'8 6 2 12 8 18'})
+                                )
+                              ),
+                              React.createElement('span',{className:'sb-tree-label',style:{
+                                textDecoration:isExcluded?'line-through':'none',
+                                color:isDone?'var(--green)':isError?'var(--red)':isExcluded?'var(--t3)':'inherit',
+                                fontWeight:isDone?500:400,
+                              }},f.name),
+                              React.createElement('button',{className:'sb-delete-btn',title:'Eliminar archivo',onClick:function(e){e.stopPropagation();setConfirmDel({type:'file',fileId:f.id,fileName:f.name});}},
+                                React.createElement('svg',{width:11,height:11,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:'2.2',strokeLinecap:'round',strokeLinejoin:'round'},
+                                  React.createElement('polyline',{points:'3 6 5 6 21 6'}),
+                                  React.createElement('path',{d:'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6'}),
+                                  React.createElement('path',{d:'M10 11v6'}),
+                                  React.createElement('path',{d:'M14 11v6'})
+                                )
+                              )
+                            );
+                          })
+                        )
+                      );
+                    })}
+                  </div>
+                )}
+
+          </div>
+
+        </div>{/* /sb-scroll */}
+
+        {/* ── BOTTOM: MIS CONTRIBUYENTES + DESPACHO ── */}
+        <div className="sbd-wrap">
+
+          {/* MIS CONTRIBUYENTES */}
+          <div className={'sbd-section'+(secContrib?' sbd-open':'')}>
+            <div className="sbd-header" onClick={function(){setSecContrib(function(v){return !v;})}}>
+              <svg className="sbd-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              <span className="sbd-title">Mis Contribuyentes</span>
+              {Object.keys(savedContribs).length>0&&<span className="sbd-badge">{Object.keys(savedContribs).length}</span>}
+              <svg className="sbd-chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+            <div className="sbd-body">
+              <div className="sbd-inner">
+                <button className="sb-new-contrib">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Nuevo contribuyente
+                </button>
+                <div className="sb-contrib-list">
+                  {Object.keys(savedContribs).length===0?(
+                    <p style={{fontSize:11,color:'var(--t3)',padding:'4px 2px',lineHeight:1.5}}>Selecciona un RFC y haz clic en "Guardar contribuyente"</p>
+                  ):Object.values(savedContribs).map(function(c){
+                    var nom=c.nombre||c.rfc;
+                    var words=(nom||'?').split(' ');
+                    var initials=((words[0]&&words[0][0])||'')+((words[1]&&words[1][0])||'');
+                    var active=xf.miRfc===c.rfc;
+                    return React.createElement('div',{key:c.rfc,className:'sb-contrib-item'+(active?' sb-active':''),onClick:function(){setContribView(c.rfc);setSecContrib(false);}},
+                      React.createElement('div',{className:'sb-contrib-avatar'},initials.toUpperCase()||'?'),
+                      React.createElement('div',{className:'sb-contrib-info'},
+                        React.createElement('div',{className:'sb-contrib-name'},nom||c.rfc),
+                        React.createElement('div',{className:'sb-contrib-rfc'},c.rfc)
+                      )
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* DESPACHO */}
+          <div className={'sbd-section'+(secDespacho?' sbd-open':'')}>
+            <div className="sbd-header" onClick={function(){setSecDespacho(function(v){return !v;})}}>
+              <svg className="sbd-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+              </svg>
+              <span className="sbd-title">Despacho</span>
+              <svg className="sbd-chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+            <div className="sbd-body">
+              <div className="sbd-inner">
+                <div className="sb-despacho-opts">
+                  <button className="sb-despacho-btn sb-crear">
+                    <div className="sb-db-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="7" width="20" height="14" rx="2"/>
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                      </svg>
+                    </div>
+                    <div className="sb-db-text">
+                      <div className="sb-db-title">Crear despacho</div>
+                      <div className="sb-db-desc">Nuevo espacio para tu firma</div>
+                    </div>
+                    <svg className="sb-db-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                  </button>
+                  <button className="sb-despacho-btn sb-unirse">
+                    <div className="sb-db-icon">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                        <polyline points="10 17 15 12 10 7"/>
+                        <line x1="15" y1="12" x2="3" y2="12"/>
+                      </svg>
+                    </div>
+                    <div className="sb-db-text">
+                      <div className="sb-db-title">Unirse a despacho</div>
+                      <div className="sb-db-desc">Ingresa con un código</div>
+                    </div>
+                    <svg className="sb-db-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>{/* /sbd-wrap */}
+
+      </nav>
+
+      <main className="layout">
+
+        {/* PANEL DERECHO */}
+        <div className="rpanel">
+          {contribView&&savedContribs[contribView]&&(
+            <ContribDetailPanel
+              rfc={contribView}
+              savedContribs={savedContribs}
+              onSelectContrib={setContribView}
+              onUpdateEfirma={updateEfirma}
+              onBack={()=>setContribView(null)}
+            />
+          )}
+
+          {results.length>0&&!contribView&&(
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'stretch'}}>
+              <div className="raised" style={{padding:'6px 13px',display:'flex',gap:12,alignItems:'center',borderRadius:7}}>
+                <span style={{fontSize:10,color:'var(--t3)',fontWeight:600}}>XML</span>
+                <span style={{display:'flex',alignItems:'center',gap:4,fontSize:12,fontWeight:700,color:'var(--green)'}}><span>✓</span>{okCount}</span>
+                {errCount>0&&<span style={{display:'flex',alignItems:'center',gap:4,fontSize:12,fontWeight:700,color:'var(--red)'}}><span>✕</span>{errCount}</span>}
+              </div>
+              {xf.miRfc&&<>
+                <div className="raised" style={{padding:'6px 13px',borderRadius:7}}>
+                  <p style={{fontSize:9,color:'var(--t3)',marginBottom:1,fontWeight:600}}>INGRESOS</p>
+                  <p style={{fontSize:12,fontWeight:700,color:'var(--green)',fontVariantNumeric:'tabular-nums'}}>{peso(totalIngs)}</p>
+                </div>
+                <div className="raised" style={{padding:'6px 13px',borderRadius:7}}>
+                  <p style={{fontSize:9,color:'var(--t3)',marginBottom:1,fontWeight:600}}>GASTOS</p>
+                  <p style={{fontSize:12,fontWeight:700,color:'var(--red)',fontVariantNumeric:'tabular-nums'}}>{peso(totalEgs)}</p>
+                </div>
+                <div className="raised" style={{padding:'6px 13px',borderRadius:7,borderLeft:'3px solid '+(totalIngs-totalEgs>=0?'var(--green)':'var(--red)')}}>
+                  <p style={{fontSize:9,color:'var(--t3)',marginBottom:1,fontWeight:600}}>NETO</p>
+                  <p style={{fontSize:12,fontWeight:700,color:totalIngs-totalEgs>=0?'var(--green)':'var(--red)',fontVariantNumeric:'tabular-nums'}}>{peso(totalIngs-totalEgs)}</p>
+                </div>
+              </>}
+              {!xf.miRfc&&(
+                <div className="raised" style={{padding:'6px 13px',borderRadius:7}}>
+                  <p style={{fontSize:9,color:'var(--t3)',marginBottom:1,fontWeight:600}}>TOTAL</p>
+                  <p style={{fontSize:12,fontWeight:700,fontVariantNumeric:'tabular-nums'}}>{peso(allRows.filter((r,i,a)=>a.findIndex(x=>x._uuid===r._uuid)===i).reduce((s,r)=>s+r.total,0))}</p>
+                </div>
+              )}
+              {uuidDupes.size>0&&(
+                <div role="alert" style={{display:'flex',alignItems:'center',gap:8,padding:'6px 12px',borderRadius:7,background:'rgba(220,38,38,.06)',border:'1px solid rgba(220,38,38,.2)'}}>
+                  <div>
+                    <p style={{fontSize:11,fontWeight:600,color:'#dc2626'}}>🔁 {uuidDupes.size} factura{uuidDupes.size!==1?'s':''} duplicada{uuidDupes.size!==1?'s':''} omitida{uuidDupes.size!==1?'s':''}</p>
+                    <p style={{fontSize:10,color:'#b45309',marginTop:1}}>Mismo UUID — se conserva solo la primera ocurrencia</p>
+                  </div>
+                  <button className="btn btn-sm" onClick={()=>setUuidDupes(new Set())} aria-label="Cerrar">✕</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {selectedSidebarItem&&(
+            <div style={{padding:'7px 12px',borderRadius:7,background:'rgba(22,163,74,.07)',border:'1px solid rgba(22,163,74,.25)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8}}>
+              <div style={{display:'flex',alignItems:'center',gap:7}}>
+                <span style={{fontSize:14}}>{selectedSidebarItem.type==='folder'?'📁':'📄'}</span>
+                <p style={{fontSize:11,color:'var(--green)',fontWeight:600,margin:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  Filtrando: {selectedSidebarItem.name||selectedSidebarItem.key}
+                </p>
+              </div>
+              <button className="btn btn-sm" style={{flexShrink:0,fontSize:10,padding:'2px 8px'}} onClick={()=>setSelectedSidebarItem(null)}>✕ Ver todo</button>
+            </div>
+          )}
+
+          {filteredRows.length>0&&(<>
+
+            {/* CONFIGURACIÓN */}
+            <div className="card" style={{padding:18}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+                <h2 style={{fontWeight:700,fontSize:14,margin:0}}>Configuración de exportación</h2>
+                <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                  <span role="status" aria-live="polite" style={{fontSize:11,color:'var(--green)',fontWeight:600,minWidth:72}}>{savedMsg?'✓ Guardado':''}</span>
+                  <button className="btn btn-sm" onClick={saveConfig}>Guardar config</button>
+                  <button className="btn btn-sm" onClick={()=>setXf(DEFAULT_XF)}>↩ Reset</button>
+                </div>
+              </div>
+
+              <div className="cfg-outer">
+
+                {/* ── COLUMNA IZQUIERDA: MI CONTRIBUYENTE + FILTRO TIPO ── */}
+                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+
+                  {/* MI CONTRIBUYENTE */}
+                  <div style={{padding:'8px 11px',background:'var(--raised)',borderRadius:8,border:'1px solid var(--b1)'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:5}}>
+                      <p style={{fontSize:10,color:'var(--t3)',letterSpacing:'.06em',fontWeight:600}}>MI CONTRIBUYENTE</p>
+                      <span style={{fontSize:9,color:'var(--t3)'}}>Emisor=<strong style={{color:'var(--green)'}}>Ingreso</strong> · Receptor=<strong style={{color:'var(--red)'}}>Egreso</strong></span>
+                    </div>
+                    {allContribs.length===0?(
+                      <p style={{fontSize:11,color:'var(--t3)'}}>Procesa XML para ver contribuyentes</p>
+                    ):(
+                      <div style={{display:'flex',gap:5,alignItems:'center'}}>
+                        <select
+                          value={xf.miRfc||''}
+                          onChange={e=>upXf({miRfc:e.target.value})}
+                          style={{flex:1,padding:'5px 8px',borderRadius:5,background:'var(--card)',border:'1px solid var(--b2)',color:xf.miRfc?'var(--t1)':'var(--t3)',fontSize:11,cursor:'pointer',minWidth:0}}
+                        >
+                          <option value="">— Mi RFC —</option>
+                          {allContribs.map(({rfc,nom})=>(
+                            <option key={rfc} value={rfc}>{nom} · {rfc}</option>
+                          ))}
+                        </select>
+                        {xf.miRfc&&<button className="btn btn-sm btn-d" style={{padding:'3px 7px',flexShrink:0}} onClick={()=>upXf({miRfc:''})}>✕</button>}
+                      </div>
+                    )}
+                    {xf.miRfc&&(()=>{
+                      const c=allContribs.find(x=>x.rfc===xf.miRfc)||savedContribs[xf.miRfc];
+                      const nom=c?.nom||c?.nombre||xf.miRfc;
+                      const yaGuardado=!!savedContribs[xf.miRfc];
+                      return(
+                        <>
+                          <div style={{marginTop:4,display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:10,paddingLeft:2,marginBottom:8}}>
+                            <span style={{color:'var(--t2)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nom}</span>
+                            <span style={{fontFamily:'monospace',color:'var(--t3)',flexShrink:0,marginLeft:6}}>{xf.miRfc}</span>
+                          </div>
+                          <button
+                            onClick={guardarContrib}
+                            style={{width:'100%',justifyContent:'center',fontSize:12,padding:'7px',display:'flex',alignItems:'center',gap:5,background:yaGuardado?'#d97706':'#f59e0b',border:`1px solid ${yaGuardado?'#b45309':'#d97706'}`,borderRadius:6,color:'#fff',cursor:'pointer',fontWeight:600,fontFamily:'Inter,sans-serif',transition:'background .15s'}}
+                          >
+                            📁 {yaGuardado?'Actualizar archivos':'Guardar archivos'}
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  {/* MOSTRAR EN VISTA Y EXPORTACIÓN */}
+                  <div style={{padding:'11px 13px',background:'var(--raised)',borderRadius:8,border:'1px solid var(--b1)'}}>
+                    <p style={{fontSize:10,color:'var(--t3)',letterSpacing:'.06em',marginBottom:8,fontWeight:600}}>MOSTRAR EN VISTA Y EXPORTACIÓN</p>
+                    <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+                      {[{k:'todos',l:'Todos'},{k:'I',l:'Solo Ingresos'},{k:'E',l:'Solo Gastos'}].map(o=>(
+                        <button key={o.k} className={`btn btn-sm${xf.tipoFiltro===o.k?' btn-act':''}`} onClick={()=>upXf({tipoFiltro:o.k})}>{o.l}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* SEPARACIÓN INGR./GASTOS */}
+                  <div style={{padding:'11px 13px',background:'var(--raised)',borderRadius:8,border:'1px solid var(--b1)'}}>
+                    <p style={{fontSize:10,color:'var(--t3)',letterSpacing:'.06em',marginBottom:9,fontWeight:600}}>SEPARACIÓN INGR./GASTOS</p>
+                    <Toggle on={xf.separar} onChange={()=>{if(!xf.separar)setSepModal(true);else upXf({separar:false,sepModo:null});}} label="Separar al exportar" color="#d97706"/>
+                    {xf.separar&&xf.sepModo&&(
+                      <div style={{marginTop:7,marginLeft:40,display:'flex',alignItems:'center',gap:8}}>
+                        <p style={{fontSize:11,color:'var(--t2)'}}>Modo: <strong>{xf.sepModo==='misma'?'Una hoja':xf.sepModo==='dos-hojas'?'Dos hojas':'Dos archivos'}</strong></p>
+                        <button className="btn btn-sm" onClick={()=>setSepModal(true)}>Cambiar</button>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+
+                {/* ── COLUMNA DERECHA: COLUMNAS + TOTALES ── */}
+                <div style={{display:'flex',flexDirection:'column',gap:12}}>
+
+                  {/* COLUMNAS */}
+                  <div>
+                    <p style={{fontSize:10,color:'var(--t3)',letterSpacing:'.06em',marginBottom:9,fontWeight:600}}>COLUMNAS</p>
+                    <Toggle on={xf.eliminarCeros} onChange={()=>upXf({eliminarCeros:!xf.eliminarCeros})} label="Ocultar columnas vacías/cero" color="#2563eb"/>
+                    {/* Visibles — colapsable */}
+                    <div style={{marginTop:10,padding:'7px 11px',borderRadius:7,background:'var(--raised)',border:'1px solid var(--b1)'}}>
+                      <button onClick={()=>setVisColsOpen(v=>!v)} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',background:'none',border:'none',cursor:'pointer',padding:0}}>
+                        <span style={{fontSize:10,color:'var(--t2)',fontWeight:500}}>Visibles ({visCols.length}) · × para ocultar</span>
+                        <span style={{fontSize:11,color:'var(--t3)',display:'inline-block',transform:visColsOpen?'rotate(180deg)':'none',transition:'transform .2s'}}>▼</span>
+                      </button>
+                      {visColsOpen&&(
+                        <div style={{display:'flex',flexWrap:'wrap',gap:3,marginTop:7}}>
+                          {visCols.map((c,i)=>(
+                            <Chip key={c.key} label={c.label}
+                              onLeft={i>0?()=>moveColOrder(c.key,-1):undefined}
+                              onRight={i<visCols.length-1?()=>moveColOrder(c.key,1):undefined}
+                              onX={()=>upXf({colsOcultadas:[...xf.colsOcultadas,c.key]})}/>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Ocultas manualmente — globales */}
+                    {xf.colsOcultadas.length>0&&(
+                      <div style={{marginTop:6,padding:'8px 11px',borderRadius:7,background:'rgba(220,38,38,.04)',border:'1px solid rgba(220,38,38,.15)'}}>
+                        <p style={{fontSize:10,color:'#b91c1c',marginBottom:5,fontWeight:500}}>Ocultas (× para mostrar):</p>
+                        <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
+                          {xf.colsOcultadas.map(k=>{
+                            const col=COL_DEFS.find(c=>c.key===k);
+                            return col?<Chip key={k} label={col.label} bg="rgba(220,38,38,.07)" fg="#dc2626" bd="rgba(220,38,38,.2)" onX={()=>upXf({colsOcultadas:xf.colsOcultadas.filter(x=>x!==k)})}/>:null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {/* Ocultas solo en Ingresos */}
+                    {(xf.colsOcultadasI||[]).length>0&&(
+                      <div style={{marginTop:6,padding:'8px 11px',borderRadius:7,background:'rgba(22,163,74,.04)',border:'1px solid rgba(22,163,74,.2)'}}>
+                        <p style={{fontSize:10,color:'#15803d',marginBottom:5,fontWeight:500}}>Ocultas en Ingresos (× para mostrar):</p>
+                        <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
+                          {(xf.colsOcultadasI||[]).map(k=>{
+                            const col=COL_DEFS.find(c=>c.key===k);
+                            return col?<Chip key={k} label={col.label} bg="rgba(22,163,74,.07)" fg="#15803d" bd="rgba(22,163,74,.2)" onX={()=>upXf({colsOcultadasI:(xf.colsOcultadasI||[]).filter(x=>x!==k)})}/>:null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {/* Ocultas solo en Egresos */}
+                    {(xf.colsOcultadasE||[]).length>0&&(
+                      <div style={{marginTop:6,padding:'8px 11px',borderRadius:7,background:'rgba(220,38,38,.04)',border:'1px solid rgba(220,38,38,.15)'}}>
+                        <p style={{fontSize:10,color:'#dc2626',marginBottom:5,fontWeight:500}}>Ocultas en Gastos (× para mostrar):</p>
+                        <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
+                          {(xf.colsOcultadasE||[]).map(k=>{
+                            const col=COL_DEFS.find(c=>c.key===k);
+                            return col?<Chip key={k} label={col.label} bg="rgba(220,38,38,.07)" fg="#dc2626" bd="rgba(220,38,38,.2)" onX={()=>upXf({colsOcultadasE:(xf.colsOcultadasE||[]).filter(x=>x!==k)})}/>:null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {/* Vacías en cero — colapsable */}
+                    {xf.eliminarCeros&&hiddenCols.length>0&&(
+                      <div style={{marginTop:6,padding:'7px 11px',borderRadius:7,background:'var(--raised)',border:'1px solid var(--b1)'}}>
+                        <button onClick={()=>setHidColsOpen(v=>!v)} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',background:'none',border:'none',cursor:'pointer',padding:0}}>
+                          <span style={{fontSize:10,color:'var(--t2)',fontWeight:500}}>Vacías en cero ({hiddenCols.length}) · × para restaurar</span>
+                          <span style={{fontSize:11,color:'var(--t3)',display:'inline-block',transform:hidColsOpen?'rotate(180deg)':'none',transition:'transform .2s'}}>▼</span>
+                        </button>
+                        {hidColsOpen&&(
+                          <div style={{display:'flex',flexWrap:'wrap',gap:3,marginTop:7}}>
+                            {hiddenCols.map(c=><Chip key={c.key} label={c.label} onX={()=>upXf({restauradas:[...xf.restauradas,c.key]})}/>)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {xf.restauradas.length>0&&(
+                      <div style={{marginTop:6,display:'flex',flexWrap:'wrap',gap:3}}>
+                        {xf.restauradas.map(k=>{const col=COL_DEFS.find(c=>c.key===k);return col?<Chip key={k} label={`↑ ${col.label}`} bg="rgba(37,99,235,.07)" fg="#1d4ed8" bd="rgba(37,99,235,.2)" onX={()=>upXf({restauradas:xf.restauradas.filter(r=>r!==k)})}/>:null;})}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* TOTALES Y ORDEN */}
+                  <div>
+                    <p style={{fontSize:10,color:'var(--t3)',letterSpacing:'.06em',marginBottom:9,fontWeight:600}}>TOTALES Y ORDEN</p>
+                    <div style={{display:'flex',flexDirection:'column',gap:9}}>
+                      <Toggle on={xf.sumasMensuales} onChange={()=>upXf({sumasMensuales:!xf.sumasMensuales})} label="Subtotales por mes" color="#16a34a"/>
+                      <button className="btn btn-sm" onClick={cycleOrden} style={xf.ordenFecha?{borderColor:'rgba(217,119,6,.3)',color:'#b45309',background:'rgba(254,243,199,.5)'}:{}}>
+                        Fecha: {xf.ordenFecha===null?'sin orden':xf.ordenFecha==='asc'?'↑ ascendente':'↓ descendente'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* SEPARAR POR AÑO */}
+                  <div style={{padding:'11px 13px',background:'var(--raised)',borderRadius:8,border:'1px solid var(--b1)'}}>
+                    <Toggle on={xf.sepPorAno} onChange={()=>upXf({sepPorAno:!xf.sepPorAno})} label="Separar por año (hojas INGRESOS/GASTOS 20XX)" color="#7c3aed"/>
+                    {xf.sepPorAno&&(
+                      <p style={{fontSize:10,color:'var(--t3)',marginTop:4,marginLeft:40}}>Crea hojas: INGRESOS 2023, GASTOS 2023, INGRESOS 2024…</p>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+
+              {/* EXPORTAR */}
+              <div style={{marginTop:16,paddingTop:14,borderTop:'1px solid var(--b1)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <p style={{fontSize:11,color:'var(--t2)'}}>
+                  {filteredRows.length} filas · {visCols.length} cols
+                  {xf.separar&&xf.sepModo==='dos-archivos'?' · 2 archivos':' · 1 archivo'}
+                </p>
+                <div style={{display:'flex',gap:7}}>
+                  <button className="btn btn-p" onClick={()=>{
+                    if(xf.sepPorAno&&xf.miRfc&&!savedContribs[xf.miRfc]){setSaveBeforeExportModal(true);}
+                    else{exportExcel();}
+                  }} style={{padding:'7px 16px'}}>
+                    ⬇ Excel{xf.sepPorAno?' (por año)':xf.separar&&xf.sepModo==='dos-archivos'?' (×2)':''}
+                  </button>
+                  <button className="btn btn-green" onClick={exportPDF} style={{padding:'7px 16px'}}>
+                    📄 PDF{xf.separar&&xf.sepModo==='dos-archivos'?' (×2)':''}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* TABLA */}
+            <div>
+              <p style={{fontSize:11,color:'var(--t3)',letterSpacing:'.04em',fontWeight:500,marginBottom:7}}>
+                VISTA PREVIA · {filteredRows.length} filas · {visCols.length} columnas visibles
+                {xf.tipoFiltro!=='todos'&&<span style={{color:xf.tipoFiltro==='I'?'var(--green)':'var(--red)',marginLeft:6}}>({xf.tipoFiltro==='I'?'Solo Ingresos':'Solo Gastos'})</span>}
+              </p>
+              <ExcelTable rows={filteredRows} xf={xf} visCols={visCols} tab={tab} setTab={setTab} onMoveCol={moveColOrder} onHideCol={(key,t)=>{
+                if(t==='I')upXf({colsOcultadasI:[...new Set([...(xf.colsOcultadasI||[]),key])]});
+                else if(t==='E')upXf({colsOcultadasE:[...new Set([...(xf.colsOcultadasE||[]),key])]});
+                else upXf({colsOcultadas:[...new Set([...xf.colsOcultadas,key])]});
+              }}/>
+            </div>
+
+            {/* DIVISOR + FILTROS FACTURAS */}
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <div style={{flex:1,height:1,background:'var(--b1)'}}/>
+              <span style={{fontSize:10,color:'var(--t3)',letterSpacing:'.06em',fontWeight:500}}>FACTURAS INDIVIDUALES</span>
+              <div style={{flex:1,height:1,background:'var(--b1)'}}/>
+            </div>
+
+            {/* Barra de filtros facturas */}
+            <div className="card inv-bar" role="group" aria-label="Filtros de facturas">
+              <span style={{fontSize:10,color:'var(--t3)',fontWeight:600,letterSpacing:'.05em',flexShrink:0}}>FILTRAR:</span>
+              <select style={selStyle} value={invF.tipo} onChange={e=>upInv({tipo:e.target.value})}>
+                <option value="todos">Todos los tipos</option>
+                <option value="I">Ingresos</option>
+                <option value="E">Egresos</option>
+              </select>
+              <select style={selStyle} value={invF.mes} onChange={e=>upInv({mes:e.target.value})}>
+                <option value="todos">Todos los meses</option>
+                {invMeses.map(m=><option key={m} value={m}>{monthLabel(m)}</option>)}
+              </select>
+              <select style={{...selStyle,maxWidth:200}} value={invF.contribuyente} onChange={e=>upInv({contribuyente:e.target.value})}>
+                <option value="todos">Todos los contribuyentes</option>
+                {invContribs.map(([rfc,nom])=><option key={rfc} value={rfc}>{nom} ({rfc})</option>)}
+              </select>
+              <select style={selStyle} value={invF.orden} onChange={e=>upInv({orden:e.target.value})}>
+                <option value="default">Orden original</option>
+                <option value="fecha-asc">Fecha ↑</option>
+                <option value="fecha-desc">Fecha ↓</option>
+                <option value="total-desc">Mayor importe</option>
+                <option value="total-asc">Menor importe</option>
+                <option value="emisor">Por emisor A-Z</option>
+              </select>
+              {invFiltrosActivos&&<button className="btn btn-sm" onClick={()=>setInvF(DEFAULT_INV)}>↺ Limpiar</button>}
+              <span style={{marginLeft:'auto',fontSize:11,color:'var(--t3)'}}>
+                {filteredResults.filter(r=>r.data?.ok).length} de {results.filter(r=>r.data?.ok).length} factura{results.filter(r=>r.data?.ok).length!==1?'s':''}
+              </span>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(272px,1fr))',gap:11,paddingBottom:24}}>
+              {filteredResults.map((r,i)=><InvCard key={r.name+i} r={r} idx={i} tipoEfectivo={tipoMap.get(r.data?.comp?.uuid)||r.data?.comp?.tipo}/>)}
+            </div>
+          </>)}
+
+          {isActive&&filteredRows.length===0&&!contribView&&(
+            <ProcessingScreen prog={prog} currentFile={files.find(f=>f.status==='processing')?.name}/>
+          )}
+
+          {filteredRows.length===0&&!busy&&!contribView&&(
+            <div className="card" style={{padding:'60px 32px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',gap:14}}>
+              <span style={{fontSize:48,opacity:.12}}>📊</span>
+              <div>
+                <p style={{fontWeight:700,fontSize:15,marginBottom:7}}>Listo para procesar</p>
+                <p style={{color:'var(--t2)',fontSize:12,lineHeight:1.7,maxWidth:320,margin:'0 auto'}}>Arrastra archivos XML o carpetas al panel izquierdo. La vista previa aparece aquí.</p>
+              </div>
+              <div style={{display:'flex',gap:28,marginTop:6}}>
+                {[['📁','Arrastra XMLs'],['⚙','Procesa'],['📊','Exporta']].map(([ic,s],i)=>(
+                  <div key={i} style={{textAlign:'center'}}>
+                    <div style={{width:42,height:42,borderRadius:9,border:'1px solid var(--b1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,margin:'0 auto 7px',background:'var(--raised)'}}>{ic}</div>
+                    <p style={{fontSize:11,color:'var(--t3)'}}>{i+1}. {s}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      <footer style={{borderTop:'1px solid var(--b1)',padding:'10px 18px',textAlign:'center',background:'var(--card)',marginTop:6}}>
+        <p style={{fontSize:10,color:'var(--t3)'}}>SAT CFDI Processor · 100% local · Sin internet · Sin API</p>
+      </footer>
+
+      {sepModal&&<SepModal onClose={()=>setSepModal(false)} onSelect={m=>{upXf({separar:true,sepModo:m});setSepModal(false);}} cur={xf.sepModo}/>}
+      {saveBeforeExportModal&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setSaveBeforeExportModal(false)}>
+          <div style={{background:'var(--card)',borderRadius:12,padding:'24px 22px',maxWidth:340,width:'90%',boxShadow:'0 20px 60px rgba(0,0,0,.25)'}} onClick={e=>e.stopPropagation()}>
+            <p style={{fontSize:14,fontWeight:700,color:'var(--t1)',marginBottom:6}}>¿Guardar antes de exportar?</p>
+            <p style={{fontSize:12,color:'var(--t2)',marginBottom:20,lineHeight:1.65}}>Los archivos de <strong>{xf.miRfc}</strong> aún no están guardados.<br/>¿Deseas guardarlos antes de descargar el Excel?</p>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <button onClick={()=>{guardarContrib();exportExcel();setSaveBeforeExportModal(false);}} style={{padding:'9px',borderRadius:8,background:'#f59e0b',border:'1px solid #d97706',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'Inter,sans-serif',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                📁 Guardar archivos y exportar
+              </button>
+              <button onClick={()=>{exportExcel();setSaveBeforeExportModal(false);}} style={{padding:'9px',borderRadius:8,background:'#1a1d23',border:'none',color:'#fff',fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>
+                ⬇ Solo exportar (sin guardar)
+              </button>
+              <button onClick={()=>setSaveBeforeExportModal(false)} style={{padding:'9px',borderRadius:8,background:'transparent',border:'1px solid var(--b1)',color:'var(--t2)',fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDel&&<ConfirmModal
+        title={confirmDel.type==='folder'?`¿Eliminar carpeta "${confirmDel.displayName}"?`:`¿Eliminar "${confirmDel.fileName}"?`}
+        msg={confirmDel.type==='folder'?'Se quitarán de la sesión todos sus archivos XML. No se eliminan del disco.':'El archivo se quitará de la sesión. No se elimina del disco.'}
+        onConfirm={doDelete}
+        onCancel={()=>setConfirmDel(null)}
+      />}
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
