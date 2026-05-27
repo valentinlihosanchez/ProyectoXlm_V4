@@ -9,6 +9,12 @@ Herramienta web para contadores mexicanos que procesa CFDIs XML del SAT. Lee arc
 - **Auth:** JWT (sin sesiones de servidor)
 - **Hosting:** Vercel (subdominio gratis)
 
+## Estado actual
+
+**Vercel:** Configurado y desplegado en https://proyectoxlm-v4.vercel.app  
+**Base de datos:** Neon PostgreSQL conectada  
+**Variables de entorno:** DATABASE_URL y JWT_SECRET configuradas en Vercel
+
 ## Instalación y configuración
 
 ### 1. Requisitos previos
