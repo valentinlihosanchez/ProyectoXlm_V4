@@ -1,10 +1,15 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index_copia.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index_copia.html"
+    }
   ],
   "functions": {
-    "api/lista69b/sync.js": { "maxDuration": 300 }
+    "api/lista69b/sync.js": {
+      "maxDuration": 300
+    }
   },
   "crons": [
     {
