@@ -2,10 +2,7 @@ const pool = require('../../lib/db');
 const { downloadAndParseLista69B } = require('../../lib/parse-sat');
 const { requireAuth } = require('../../lib/auth');
 
-// Vercel Pro: permite hasta 300s. En Hobby el límite es 10s (sync no funcionará ahí).
-module.exports.config = { maxDuration: 300 };
-
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).end();
 
   try {
@@ -65,4 +62,7 @@ module.exports = async function handler(req, res) {
       details: error.message,
     });
   }
-};
+}
+
+handler.config = { maxDuration: 300 };
+module.exports = handler;
