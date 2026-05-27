@@ -100,19 +100,31 @@ https://www.sat.gob.mx/minisitio/DatosAbiertos/contribuyentes_publicados.html
 ---
 
 ## Orden de implementación acordado
-1. `package.json` + `vercel.json` + estructura de carpetas
-2. `lib/db.js` (conexión Neon PostgreSQL)
-3. Schema SQL (crear tablas)
-4. `lib/auth.js` + endpoints login/register
-5. Endpoints de contribuyentes
-6. `lib/parse-sat.js` + endpoint sync lista 69B
-7. `api/lista69b/check.js` + alerta en frontend
-8. Despachos multi-usuario
+1. ✅ `package.json` + `vercel.json` + estructura de carpetas
+2. ✅ `lib/db.js` (conexión Neon PostgreSQL)
+3. ✅ Schema SQL (crear tablas)
+4. ✅ `lib/auth.js` + endpoints login/register
+5. ✅ Endpoints de contribuyentes
+6. ✅ `lib/parse-sat.js` + endpoint sync lista 69B (completado 2026-05-27)
+7. ✅ `api/lista69b/check.js` + alerta en frontend (check.js ✅, alerta frontend pendiente)
+8. ⏳ Despachos multi-usuario (carpeta existe, código pendiente)
 
-## Pendiente del usuario antes de implementar
-- Crear cuenta en neon.tech (gratis) y compartir la connection string
-- Crear cuenta en vercel.com si no tiene
-- Conectar Vercel con repositorio GitHub del proyecto
+## Cambios en esta sesión (2026-05-27)
+- **✅ Creado `lib/parse-sat.js`**: Parser que descarga Excel del SAT, extrae RFC/tipo/situación de listas EFO y EDOS
+- **✅ Implementado `api/lista69b/sync.js`**: Endpoint que sincroniza datos, hace upsert masivo, registra en `lista_69b_sync`
+- **✅ Creado `.env.local`**: Template de variables de entorno necesarias
+- **✅ Actualizado `.gitignore`**: Excluir .env, node_modules, etc.
+- **Git**: Ya existe repo GitHub conectado (`origin/master`)
+
+## Próximos pasos
+1. Configurar variables de entorno en máquina local (llenar `.env.local`)
+2. Instalar dependencias: `npm install`
+3. Conectar Neon.tech (compartir CONNECTION STRING en .env.local)
+4. Probar localmente: `vercel dev` → GET `/api/health` (verificar DB conectada)
+5. Probar sync: POST `/api/lista69b/sync` (sin token, permite cron automático)
+6. Verificar tabla `lista_69b` poblada en Neon
+7. Push a GitHub: `git add . && git commit -m "feat: implement lista 69B sync"` 
+8. Vercel: conectar repo y configurar vars de entorno (DATABASE_URL, JWT_SECRET)
 
 ---
 

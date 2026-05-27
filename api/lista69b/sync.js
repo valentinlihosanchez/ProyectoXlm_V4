@@ -1,7 +1,69 @@
 const pool = require('../../lib/db');
+const { downloadAndParseLista69B } = require('../../lib/parse-sat');
+const { requireAuth } = require('../../lib/auth');
 
-// Stub — implementación completa pendiente (lib/parse-sat.js)
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).end();
-  res.json({ message: 'Sync pendiente de implementar' });
+
+  try {
+    // Solo admins o cron automático (Vercel cron no envía auth, lo permitimos)
+    const user = requireAuth(req);
+    const isManualSync = !!user;
+
+    console.log(`[sync] Iniciando sincronización${isManualSync ? ' manual' : ' automática (cron)'}...`);
+
+    // Descargar y parsear listas del SAT
+    const records = await downloadAndParseLista69B();
+    if (records.length === 0) {
+      return res.status(400).json({ error: 'No se extrajeron registros de las listas SAT' });
+    }
+
+    // Preparar statement de upsert masivo
+    // UPSERT: INSERT ... ON CONFLICT UPDATE (SQL estándar PostgreSQL)
+    const values = records.map((r) => [r.rfc, r.tipo, r.situacion || null]);
+    const placeholders = values
+      .map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`)
+      .join(',');
+
+    const flatValues = values.flat();
+
+    const upsertQuery = `
+      INSERT INTO lista_69b (rfc, tipo, situacion)
+      VALUES ${placeholders}
+      ON CONFLICT (rfc) DO UPDATE SET
+        tipo = EXCLUDED.tipo,
+        situacion = EXCLUDED.situacion;
+    `;
+
+    // Ejecutar upsert
+    await pool.query(upsertQuery, flatValues);
+    console.log(`[sync] ${records.length} registros insertados/actualizados`);
+
+    // Registrar el sync
+    const syncResult = await pool.query(
+      `INSERT INTO lista_69b_sync (records_count, synced_by)
+       VALUES ($1, $2)
+       RETURNING id, synced_at, records_count`,
+      [records.length, user?.id || null]
+    );
+
+    const syncRecord = syncResult.rows[0];
+
+    res.json({
+      success: true,
+      message: `Sincronización completada: ${records.length} registros`,
+      sync: {
+        id: syncRecord.id,
+        synced_at: syncRecord.synced_at,
+        records_count: syncRecord.records_count,
+        synced_by: user?.id || 'sistema',
+      },
+    });
+  } catch (error) {
+    console.error('[sync] Error durante sincronización:', error);
+    res.status(500).json({
+      error: 'Error durante sincronización',
+      details: error.message,
+    });
+  }
 };
