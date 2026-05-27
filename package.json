@@ -1,8 +1,9 @@
 {
   "name": "sat-cfdi-processor",
   "version": "1.0.0",
-  "description": "Procesador de CFDIs XML del SAT mexicano",
+  "description": "Procesador de CFDIs XML del SAT mexicano para contadores",
   "private": true,
+  "main": "index.js",
   "scripts": {
     "dev": "vercel dev"
   },
