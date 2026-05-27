@@ -170,3 +170,4 @@ ProyectoXlm_V4/
 - [Documentación CFDI](https://www.sat.gob.mx/contabilidad/c_cfdi)
 - [Neon PostgreSQL](https://neon.tech/docs)
 - [Vercel Functions](https://vercel.com/docs/functions/serverless-functions)
+Cambio cosmético
