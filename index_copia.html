@@ -1583,7 +1583,16 @@ const ContribDetailPanel=({rfc,savedContribs,onSelectContrib,onUpdateEfirma,onBa
   const [openCarpetas,setOpenCarpetas]=useState(new Set());
   const [efirmaDate,setEfirmaDate]=useState(contrib?.efirmaVencimiento||'');
   const [efirmaSaved,setEfirmaSaved]=useState(false);
+  const [lista69b,setLista69b]=useState(null);
   useEffect(()=>{setEfirmaDate(contrib?.efirmaVencimiento||'');},[rfc]);
+  useEffect(()=>{
+    if(!rfc)return;
+    setLista69b(null);
+    fetch(`/api/lista69b/check?rfc=${encodeURIComponent(rfc)}`)
+      .then(r=>r.ok?r.json():null)
+      .then(d=>setLista69b(d))
+      .catch(()=>setLista69b(null));
+  },[rfc]);
   const toggle=n=>setOpenCarpetas(p=>{const s=new Set(p);s.has(n)?s.delete(n):s.add(n);return s;});
   const saveEfirma=()=>{onUpdateEfirma(rfc,efirmaDate);setEfirmaSaved(true);setTimeout(()=>setEfirmaSaved(false),2200);};
   const days=efirmaDate?Math.ceil((new Date(efirmaDate)-new Date())/(864e5)):null;
@@ -1601,6 +1610,14 @@ const ContribDetailPanel=({rfc,savedContribs,onSelectContrib,onUpdateEfirma,onBa
           <div style={{flex:1,minWidth:0}}>
             <p style={{fontWeight:700,fontSize:16,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--t1)'}}>{contrib.nombre||rfc}</p>
             <p style={{fontSize:11,fontFamily:'monospace',color:'var(--t3)',marginTop:2}}>{rfc}</p>
+            {lista69b?.found&&(
+              <div style={{display:'inline-flex',alignItems:'center',gap:5,marginTop:6,padding:'4px 10px',borderRadius:6,background:'rgba(220,38,38,.09)',border:'1px solid rgba(220,38,38,.25)'}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span style={{fontSize:11,fontWeight:700,color:'#dc2626'}}>RIESGO FISCAL — Lista 69B SAT</span>
+                {lista69b.data?.tipo&&<span style={{fontSize:10,color:'#b91c1c',background:'rgba(220,38,38,.12)',borderRadius:4,padding:'1px 5px',fontWeight:600}}>{lista69b.data.tipo}</span>}
+                {lista69b.lastSync&&<span style={{fontSize:10,color:'#b91c1c',marginLeft:2}}>· Sync: {new Date(lista69b.lastSync).toLocaleDateString('es-MX')}</span>}
+              </div>
+            )}
             {(contrib.tags||[]).length>0&&(
               <div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}}>
                 {contrib.tags.map(t=>{const c=contrib.color||rfcColor(rfc);return<span key={t} className="ch-tag" style={{background:`${c}18`,color:c,border:`1px solid ${c}30`}}>{t}</span>;})}</div>

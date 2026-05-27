@@ -2,6 +2,9 @@ const pool = require('../../lib/db');
 const { downloadAndParseLista69B } = require('../../lib/parse-sat');
 const { requireAuth } = require('../../lib/auth');
 
+// Vercel Pro: permite hasta 300s. En Hobby el límite es 10s (sync no funcionará ahí).
+module.exports.config = { maxDuration: 300 };
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).end();
 
@@ -18,25 +21,21 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'No se extrajeron registros de las listas SAT' });
     }
 
-    // Preparar statement de upsert masivo
-    // UPSERT: INSERT ... ON CONFLICT UPDATE (SQL estándar PostgreSQL)
-    const values = records.map((r) => [r.rfc, r.tipo, r.situacion || null]);
-    const placeholders = values
-      .map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`)
-      .join(',');
+    // Upsert en batches de 1000 para evitar el límite de 65535 parámetros de PostgreSQL
+    const BATCH_SIZE = 1000;
+    for (let offset = 0; offset < records.length; offset += BATCH_SIZE) {
+      const batch = records.slice(offset, offset + BATCH_SIZE);
+      const placeholders = batch
+        .map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`)
+        .join(',');
+      const flatValues = batch.flatMap((r) => [r.rfc, r.tipo, r.situacion || null]);
 
-    const flatValues = values.flat();
-
-    const upsertQuery = `
-      INSERT INTO lista_69b (rfc, tipo, situacion)
-      VALUES ${placeholders}
-      ON CONFLICT (rfc) DO UPDATE SET
-        tipo = EXCLUDED.tipo,
-        situacion = EXCLUDED.situacion;
-    `;
-
-    // Ejecutar upsert
-    await pool.query(upsertQuery, flatValues);
+      await pool.query(
+        `INSERT INTO lista_69b (rfc, tipo, situacion) VALUES ${placeholders}
+         ON CONFLICT (rfc) DO UPDATE SET tipo = EXCLUDED.tipo, situacion = EXCLUDED.situacion`,
+        flatValues
+      );
+    }
     console.log(`[sync] ${records.length} registros insertados/actualizados`);
 
     // Registrar el sync

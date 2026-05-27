@@ -5,12 +5,18 @@ const { signToken } = require('../../lib/auth');
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { email, password, nombre } = req.body;
+  const email = req.body.email?.trim().toLowerCase();
+  const nombre = req.body.nombre?.trim();
+  const { password } = req.body;
+
   if (!email || !password || !nombre)
     return res.status(400).json({ error: 'email, password y nombre son requeridos' });
 
-  if (password.length < 6)
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return res.status(400).json({ error: 'Email inválido' });
+
+  if (password.length < 8)
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
 
   const { rows: existing } = await pool.query(
     'SELECT id FROM users WHERE email = $1', [email.toLowerCase()]
